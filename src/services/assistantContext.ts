@@ -100,9 +100,11 @@ export class AssistantContextService {
         return { text, intent: 'PAYMENT' };
       }
       if (recentProcurement) {
+        const hasPayable = typeof recentProcurement.totalGrossPayable === 'number' && !isNaN(recentProcurement.totalGrossPayable);
+        const payableStr = hasPayable ? `₹${recentProcurement.totalGrossPayable.toLocaleString('en-IN')}` : (isHi ? 'प्रतीक्षारत' : 'Pending verification');
         const text = isHi
-          ? `तौल पर्ची #${recentProcurement.slipNumber} के लिए कुल देय राशि ₹${recentProcurement.totalGrossPayable.toLocaleString('en-IN')} है। डीबीटी स्थिति: ${recentProcurement.dbtStatus}।`
-          : `For Weighbridge Slip #${recentProcurement.slipNumber}, net payable is ₹${recentProcurement.totalGrossPayable.toLocaleString('en-IN')}. DBT Status: ${recentProcurement.dbtStatus}.`;
+          ? `तौल पर्ची #${recentProcurement.slipNumber} के लिए कुल देय राशि ${payableStr} है। डीबीटी स्थिति: ${recentProcurement.dbtStatus}।`
+          : `For Weighbridge Slip #${recentProcurement.slipNumber}, net payable is ${payableStr}. DBT Status: ${recentProcurement.dbtStatus}.`;
         return { text, intent: 'PAYMENT' };
       }
       const text = isHi

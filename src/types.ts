@@ -75,6 +75,7 @@ export interface FarmerProfile {
   fullName: string;
   fullNameHi: string;
   phone: string;
+  email?: string;
   village: string;
   villageHi: string;
   district: string;
@@ -166,6 +167,11 @@ export interface ProcurementRecord {
   kisanId: string;
   cropName: string;
   cropNameHi: string;
+  centreName?: string;
+  centreNameHi?: string;
+  grossWeightKg?: number;
+  tareWeightKg?: number;
+  netWeightKg?: number;
   grossWeightQuintals: number;
   tareWeightQuintals: number;
   netWeightQuintals: number;
@@ -224,4 +230,87 @@ export interface BusinessRuleConfig {
   autoCallIntervalMins: number;
   alertEmergencyBroadcast: string;
   alertEmergencyBroadcastHi: string;
+}
+
+export interface SupervisorSession {
+  supervisorId: string;
+  officerName: string;
+  designation: string;
+  centreId: string;
+  centreName: string;
+  loginTime: string;
+  tokenExpiresAt: string;
+  terminalIp: string;
+  terminalId: string;
+  clearanceLevel: 'LEVEL-2_MANDI_SUPERVISOR' | 'LEVEL-3_DISTRICT_INSPECTOR';
+  activeShift: 'Morning (08:00 - 14:00)' | 'Afternoon (14:00 - 20:00)';
+}
+
+export interface SuperAdminSession {
+  adminId: string;
+  adminName: string;
+  designation: string;
+  department: string;
+  state: string;
+  district: string;
+  loginTime: string;
+  tokenExpiresAt: string;
+  gatewaySessionId: string;
+  terminalIp: string;
+  clearanceLevel: 'LEVEL-4_STATE_GOVERNANCE';
+}
+
+export interface VerificationDocument {
+  id: string;
+  type: '7_12_RoR' | 'Weighbridge_Slip' | 'Assayer_Test_Certificate';
+  fileName: string;
+  fileSize: string;
+  uploadedAt: string;
+  status: 'Uploaded' | 'Validating' | 'Verified' | 'Rejected';
+  extractedData: {
+    kisanId: string;
+    farmerName: string;
+    crop: string;
+    quantityQuintals: number;
+    moisturePercent?: number;
+    khasraNumber?: string;
+    village?: string;
+  };
+  validationErrors?: string[];
+  assayedBy?: string;
+}
+
+export interface QuickOperationalReport {
+  generatedAt: string;
+  centreName: string;
+  shiftName: string;
+  totalFarmersServiced: number;
+  totalScheduledToday: number;
+  onTimeArrivals: number;
+  lateArrivals: number;
+  currentQueueLength: number;
+  avgWaitingTimeMins: number;
+  processingPaceQuintalsPerHour: number;
+  capacityUtilizationPct: number;
+  procuredNetQuintals: number;
+  procuredMetricTonnes: number;
+  pendingWorkloadQuintals: number;
+  totalDbtPayableInr: number;
+  dbtAdviceGeneratedCount: number;
+  activeIncidentsCount: number;
+  incidentsSummary: string[];
+}
+
+export interface HourlyOperationalInterval {
+  hourSlot: string; // e.g. "08:00 - 09:00"
+  expectedArrivals: number;
+  actualArrivals: number;
+  queueMovement: number; // processed
+  procuredQuintals: number;
+  avgWaitMins: number;
+  avgServiceMins: number;
+  centreLoadPct: number;
+  status: 'Smooth' | 'Moderate' | 'Peak Congestion' | 'Clearing';
+  bottleneckNote: string;
+  mitigationApplied: string;
 }

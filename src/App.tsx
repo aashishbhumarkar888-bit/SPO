@@ -7,13 +7,18 @@ import {
   ProcurementRecord, 
   DbtTransaction, 
   MachineryAsset, 
-  QueueStatus 
+  QueueStatus,
+  SupervisorSession,
+  SuperAdminSession
 } from './types';
 import { AppHeader } from './components/AppHeader';
-import { SihDemoBar } from './components/demo/SihDemoBar';
 import { FarmerApp } from './components/farmer/FarmerApp';
 import { SupervisorConsole } from './components/supervisor/SupervisorConsole';
 import { SuperAdminConsole } from './components/superadmin/SuperAdminConsole';
+import { SupervisorLoginModal } from './components/supervisor/SupervisorLoginModal';
+import { SuperAdminLoginModal } from './components/superadmin/SuperAdminLoginModal';
+import { FarmerLoginModal } from './components/farmer/FarmerLoginModal';
+import { SihDemoConsoleModal } from './components/demo/SihDemoConsoleModal';
 import { SihEvaluationInspector } from './components/common/SihEvaluationInspector';
 import { auditLogger } from './domain/auditLog';
 import { 
@@ -21,24 +26,236 @@ import {
   INITIAL_TOKENS, 
   INITIAL_PROCUREMENT, 
   DBT_TRANSACTIONS, 
-  FLEET_ASSETS,
-  TRANSLATIONS
+  FLEET_ASSETS 
 } from './data/agriMockData';
 import { playAudioChime } from './utils/speech';
 import { TimeService } from './services/timeService';
 import { notificationService } from './services/notificationService';
 import { eventBus } from './services/eventBus';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState<AppRole>('farmer');
-  const [language, setLanguage] = useState<LanguageCode>('hi');
+  const [language, setLanguage] = useState<LanguageCode>(() => {
+    try {
+      const saved = localStorage.getItem('agriseva_language');
+      if (saved === 'hi' || saved === 'en' || saved === 'mr' || saved === 'pa') {
+        return saved as LanguageCode;
+      }
+    } catch {
+      // restricted environments
+    }
+    return 'hi';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('agriseva_language', language);
+    } catch {
+      // restricted environments
+    }
+  }, [language]);
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('agriseva_theme');
+    return (saved === 'dark' || saved === 'light') ? saved : 'light';
+  });
   const [outdoorMode, setOutdoorMode] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
-  const [mobileFrameMode, setMobileFrameMode] = useState<boolean>(false);
   const [isVoiceMitraOpen, setIsVoiceMitraOpen] = useState<boolean>(false);
+
+  // Sync theme with document root
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('agriseva_theme', theme);
+  }, [theme]);
+
+  // Authenticated operational sessions (Supervisor & Super Admin)
+  const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(() => {
+    try {
+      const saved = localStorage.getItem('spo_supervisor_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [superAdminSession, setSuperAdminSession] = useState<SuperAdminSession | null>(() => {
+    try {
+      const saved = localStorage.getItem('spo_superadmin_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    if (supervisorSession) {
+      localStorage.setItem('spo_supervisor_session', JSON.stringify(supervisorSession));
+    } else {
+      localStorage.removeItem('spo_supervisor_session');
+    }
+  }, [supervisorSession]);
+
+  useEffect(() => {
+    if (superAdminSession) {
+      localStorage.setItem('spo_superadmin_session', JSON.stringify(superAdminSession));
+    } else {
+      localStorage.removeItem('spo_superadmin_session');
+    }
+  }, [superAdminSession]);
+
+  // Security modals & Jury demo states
+  const [isFarmerLoginModalOpen, setIsFarmerLoginModalOpen] = useState<boolean>(false);
+  const [isSupervisorModalOpen, setIsSupervisorModalOpen] = useState<boolean>(false);
+  const [isSuperAdminModalOpen, setIsSuperAdminModalOpen] = useState<boolean>(false);
+  const [isSihDemoOpen, setIsSihDemoOpen] = useState<boolean>(false);
   const [isSihAuditOpen, setIsSihAuditOpen] = useState<boolean>(false);
   const [selectedAuditId, setSelectedAuditId] = useState<string | undefined>(undefined);
+
+  // Authenticated session lifecycle handlers
+  const handleFarmerLoginSuccess = (newFarmer: FarmerProfile) => {
+    setFarmer(newFarmer);
+    setIsFarmerLoginModalOpen(false);
+    localStorage.setItem('agriseva_farmer', JSON.stringify(newFarmer));
+    playAudioChime();
+    auditLogger.log({
+      action: 'FARMER_AUTHENTICATED',
+      actorRole: 'FARMER',
+      actorId: newFarmer.kisanId,
+      targetEntity: 'FarmerProfile',
+      targetId: newFarmer.id,
+      description: `Farmer ${newFarmer.fullName} authenticated via multi-method login (${newFarmer.kisanId})`,
+      metadata: {
+        kisanId: newFarmer.kisanId,
+        aadhaarMasked: `XXXX XXXX ${newFarmer.aadhaarLast4}`,
+        phone: newFarmer.phone,
+        email: newFarmer.email
+      }
+    });
+    notificationService.send({
+      type: 'GENERAL',
+      title: language === 'hi' ? 'लॉगिन सफल' : 'Login Successful',
+      titleHi: 'लॉगिन सफल',
+      body: language === 'hi'
+        ? `नमस्ते ${newFarmer.fullNameHi || newFarmer.fullName}! आप सफलतापूर्वक लॉगिन हो चुके हैं।`
+        : `Welcome ${newFarmer.fullName}! You are securely logged in.`,
+      bodyHi: `नमस्ते ${newFarmer.fullNameHi || newFarmer.fullName}! आप सफलतापूर्वक लॉगिन हो चुके हैं।`,
+      channel: 'APP'
+    });
+  };
+
+  const handleSupervisorLoginSuccess = (session: SupervisorSession) => {
+    setSupervisorSession(session);
+    setIsSupervisorModalOpen(false);
+    setCurrentRole('supervisor');
+    playAudioChime();
+  };
+
+  const handleSupervisorLogout = () => {
+    sessionStorage.clear();
+    if (supervisorSession) {
+      auditLogger.log({
+        action: 'SUPERVISOR_LOGGED_OUT',
+        actorRole: 'SUPERVISOR',
+        actorId: supervisorSession.supervisorId,
+        targetEntity: 'Session',
+        targetId: supervisorSession.terminalId,
+        description: `Supervisor ${supervisorSession.officerName} cleanly terminated station session and purged session storage`
+      });
+    }
+    setSupervisorSession(null);
+    setCurrentRole('farmer');
+    playAudioChime();
+  };
+
+  const handleSuperAdminLoginSuccess = (session: SuperAdminSession) => {
+    setSuperAdminSession(session);
+    setIsSuperAdminModalOpen(false);
+    setCurrentRole('superadmin');
+    playAudioChime();
+  };
+
+  const handleSuperAdminLogout = () => {
+    sessionStorage.clear();
+    if (superAdminSession) {
+      auditLogger.log({
+        action: 'SUPER_ADMIN_LOGGED_OUT',
+        actorRole: 'SUPER_ADMIN',
+        actorId: superAdminSession.adminId,
+        targetEntity: 'GovernancePortal',
+        targetId: superAdminSession.gatewaySessionId,
+        description: `Administrator ${superAdminSession.adminName} cleanly terminated governance session and purged session storage`
+      });
+    }
+    setSuperAdminSession(null);
+    setCurrentRole('farmer');
+    playAudioChime();
+  };
+
+  const handleFarmerClearSessionAndLogout = () => {
+    sessionStorage.clear();
+    localStorage.removeItem('spo_supervisor_session');
+    localStorage.removeItem('spo_superadmin_session');
+    localStorage.removeItem('agriseva_farmer');
+    setSupervisorSession(null);
+    setSuperAdminSession(null);
+    setCurrentRole('farmer');
+    setIsFarmerLoginModalOpen(true);
+    playAudioChime();
+    auditLogger.log({
+      action: 'FARMER_SESSION_PURGED',
+      actorRole: 'FARMER',
+      actorId: farmer.kisanId,
+      targetEntity: 'SessionStorage',
+      targetId: 'CLIENT_CACHE',
+      description: `Farmer ${farmer.fullName} cleanly purged session storage and reset operational cache`
+    });
+    notificationService.send({
+      type: 'GENERAL',
+      title: language === 'hi' ? 'सत्र साफ़ किया गया' : 'Session Purged & Cleared',
+      titleHi: 'सत्र साफ़ किया गया',
+      body: language === 'hi' ? 'सक्रिय सत्र और संवेदनशील परिचालन डेटा सुरक्षित रूप से साफ़ कर दिए गए हैं।' : 'Session storage and sensitive operational cache cleared.',
+      bodyHi: 'सक्रिय सत्र और संवेदनशील परिचालन डेटा सुरक्षित रूप से साफ़ कर दिए गए हैं।',
+      channel: 'APP'
+    });
+  };
+
+  // Global keyboard shortcuts:
+  // - CTRL+SHIFT+A / CMD+SHIFT+A: Opens Supervisor Operations Terminal (authenticates if needed)
+  // - CTRL+SHIFT+S / CMD+SHIFT+S: Opens Strategic Super Admin Console (authenticates if needed)
+  // - CTRL+SHIFT+D / CMD+SHIFT+D: Opens SIH Demo Simulation Drawer for Jury
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+        if (e.key === 'A' || e.key === 'a') {
+          e.preventDefault();
+          if (supervisorSession) {
+            setCurrentRole('supervisor');
+          } else {
+            setIsSupervisorModalOpen(true);
+          }
+        } else if (e.key === 'S' || e.key === 's') {
+          e.preventDefault();
+          if (superAdminSession) {
+            setCurrentRole('superadmin');
+          } else {
+            setIsSuperAdminModalOpen(true);
+          }
+        } else if (e.key === 'D' || e.key === 'd') {
+          e.preventDefault();
+          setIsSihDemoOpen(prev => !prev);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [supervisorSession, superAdminSession]);
 
   // Global listener to jump into specific feature in SIH Tech Audit
   useEffect(() => {
@@ -52,6 +269,32 @@ export default function App() {
     window.addEventListener('open-sih-audit', handleOpenAudit);
     return () => window.removeEventListener('open-sih-audit', handleOpenAudit);
   }, []);
+
+  // Check URL params for deep-link / jury access (e.g. ?role=supervisor or ?role=superadmin or ?demo=1)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const roleParam = params.get('role');
+      if (roleParam === 'supervisor') {
+        if (supervisorSession) {
+          setCurrentRole('supervisor');
+        } else {
+          setIsSupervisorModalOpen(true);
+        }
+      } else if (roleParam === 'superadmin') {
+        if (superAdminSession) {
+          setCurrentRole('superadmin');
+        } else {
+          setIsSuperAdminModalOpen(true);
+        }
+      }
+      if (params.get('demo') === 'true' || params.get('demo') === '1') {
+        setIsSihDemoOpen(true);
+      }
+    } catch {
+      // Ignore if URLSearchParams not accessible
+    }
+  }, [supervisorSession, superAdminSession]);
 
   // Core synchronized application state
   const [farmer, setFarmer] = useState<FarmerProfile>(() => {
@@ -259,16 +502,18 @@ export default function App() {
   };
 
   // Get current active token for farmer
-  const activeToken = tokens.find(t => t.kisanId === farmer.kisanId && t.status !== 'Completed') || tokens[0];
+  const activeToken = tokens.find(t => t.kisanId === farmer.kisanId && t.status !== 'Completed')
+    || tokens.find(t => t.kisanId === farmer.kisanId)
+    || tokens[0];
 
   return (
-    <div className={`min-h-screen bg-[#F6F9F7] text-[#063B2A] transition-colors ${outdoorMode ? 'outdoor-contrast-mode' : ''}`}>
-      {/* Universal Header with 3 Roles, Language Switcher, High Contrast, Offline Toggle */}
+    <div className={`min-h-screen bg-[#F4F7F5] dark:bg-[#071711] text-[#063B2A] dark:text-[#F0FAF5] flex flex-col transition-colors duration-200 ${outdoorMode ? 'outdoor-contrast-mode' : ''}`}>
+      {/* Public Header (Strictly Farmer/Citizen-focused, no role switcher) */}
       <AppHeader
-        currentRole={currentRole}
-        onRoleChange={setCurrentRole}
         language={language}
         onLanguageChange={setLanguage}
+        theme={theme}
+        onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
         outdoorMode={outdoorMode}
         onToggleOutdoorMode={() => setOutdoorMode(prev => !prev)}
         isOffline={isOffline}
@@ -276,29 +521,12 @@ export default function App() {
           setIsOffline(prev => !prev);
           playAudioChime();
         }}
-        mobileFrameMode={mobileFrameMode}
-        onToggleMobileFrame={() => setMobileFrameMode(prev => !prev)}
-        onOpenSihAudit={() => setIsSihAuditOpen(true)}
+        onOpenFarmerLogin={() => setIsFarmerLoginModalOpen(true)}
+        farmerName={farmer.fullName}
       />
 
-      {/* Persistent SIH Evaluation Demo Scenario & Interactive Control Layer */}
-      <SihDemoBar
-        currentFarmer={farmer}
-        activeToken={activeToken}
-        allTokens={tokens}
-        onSetFarmer={setFarmer}
-        onUpdateTokens={setTokens}
-        onAddProcurement={handleAddProcurement}
-        onUpdateDbtTransactions={setDbtTransactions}
-        onOpenSihAudit={(id) => {
-          if (id) setSelectedAuditId(id);
-          setIsSihAuditOpen(true);
-        }}
-        onResetAllState={handleResetAllState}
-      />
-
-      {/* Role-Based Primary Views */}
-      <main className="w-full pb-16">
+      {/* Main Viewport Container: Switches based on authenticated role */}
+      <div className="flex-1 w-full">
         {currentRole === 'farmer' && (
           <FarmerApp
             farmer={farmer}
@@ -307,11 +535,17 @@ export default function App() {
             dbtTransactions={dbtTransactions}
             language={language}
             isOffline={isOffline}
-            mobileFrameMode={mobileFrameMode}
             onAddToken={handleAddToken}
             onOpenVoiceMitra={() => setIsVoiceMitraOpen(true)}
             isVoiceMitraOpen={isVoiceMitraOpen}
             onCloseVoiceMitra={() => setIsVoiceMitraOpen(false)}
+            onClearSessionAndLogout={handleFarmerClearSessionAndLogout}
+            theme={theme}
+            onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+            outdoorMode={outdoorMode}
+            onToggleOutdoorMode={() => setOutdoorMode(prev => !prev)}
+            onLanguageChange={setLanguage}
+            onOpenLogin={() => setIsFarmerLoginModalOpen(true)}
           />
         )}
 
@@ -328,28 +562,129 @@ export default function App() {
             onDispatchAsset={handleDispatchAsset}
             onRecallAsset={handleRecallAsset}
             language={language}
+            onExit={handleSupervisorLogout}
+            session={supervisorSession}
+            theme={theme}
+            onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+            onLanguageChange={setLanguage}
           />
         )}
 
         {currentRole === 'superadmin' && (
           <SuperAdminConsole
             language={language}
+            onExit={handleSuperAdminLogout}
+            session={superAdminSession}
+            theme={theme}
+            onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+            onLanguageChange={setLanguage}
           />
         )}
-      </main>
+      </div>
 
-      {/* Persistent Floating SIH Technical Evaluation Pill (always accessible for jury evaluation) */}
-      <aside aria-label="SIH Evaluation Quick Access" className="fixed bottom-4 right-4 z-40">
-        <button
-          onClick={() => setIsSihAuditOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#063B2A] hover:bg-[#0B5D3B] text-white shadow-lg border border-emerald-500/40 text-xs font-bold transition-transform active:scale-95"
-          title="Inspect SIH Technical Architecture: Implemented vs Integration-Ready Status"
-        >
-          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-          <ShieldCheck className="w-4 h-4 text-amber-300" />
-          <span className="font-mono tracking-tight">SIH Tech Audit Matrix</span>
-        </button>
-      </aside>
+      {/* Official Government Footer (Rendered in public farmer mode across all screen sizes) */}
+      {currentRole === 'farmer' && (
+        <footer className="bg-[#063B2A] dark:bg-[#081B13] text-white border-t border-[#0B5D3B] dark:border-[#153A2C] py-6 px-4 sm:px-6 mt-auto transition-colors">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/70">
+            <div className="text-center sm:text-left">
+              <p className="font-bold text-white text-sm">
+                SPO — Smart Procurement Orchestration
+              </p>
+              <p className="mt-0.5 text-xs text-[#DDF4E9]/80">
+                Department of Agriculture & Farmers Welfare • Ministry of Agriculture & Farmers Welfare, Govt. of India
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4 text-xs">
+              <a href="tel:18001801551" className="hover:text-amber-300 transition-colors flex items-center gap-1.5">
+                <PhoneCall className="w-3.5 h-3.5 text-amber-400" />
+                <span>Kisan Helpline: 1800-180-1551</span>
+              </a>
+
+              <span>•</span>
+
+              {/* Discreet Jury / Evaluator Demo Trigger */}
+              <button
+                onClick={() => setIsSihDemoOpen(true)}
+                className="text-white/80 hover:text-amber-300 font-mono transition-colors underline decoration-dotted font-semibold"
+                title="Open Controlled SIH Jury Demonstration Drawer (or press Ctrl+Shift+D)"
+              >
+                SIH Jury Console [Demo Simulation]
+              </button>
+
+              <span>•</span>
+
+              {/* Discreet Technical Audit Matrix Link */}
+              <button
+                onClick={() => setIsSihAuditOpen(true)}
+                className="text-white/80 hover:text-emerald-300 font-mono transition-colors underline decoration-dotted font-semibold"
+                title="Inspect SIH Technical Architecture: Implemented vs Integration-Ready Status"
+              >
+                SIH Tech Audit Matrix
+              </button>
+
+              <span>•</span>
+
+              {/* Discreet Supervisor Login Link */}
+              <button
+                onClick={() => {
+                  if (supervisorSession) {
+                    setCurrentRole('supervisor');
+                  } else {
+                    setIsSupervisorModalOpen(true);
+                  }
+                }}
+                className="text-white/80 hover:text-white transition-colors flex items-center gap-1 font-semibold"
+                title="Authorized Mandi Board Personnel Login (or press Ctrl+Shift+A)"
+              >
+                <Lock className="w-3 h-3 text-amber-400" />
+                <span>Operator Login</span>
+              </button>
+            </div>
+          </div>
+        </footer>
+      )}
+
+      {/* Farmer Multi-Method Authentication Modal (Aadhaar, Mobile, or Email) */}
+      <FarmerLoginModal
+        isOpen={isFarmerLoginModalOpen}
+        onClose={() => setIsFarmerLoginModalOpen(false)}
+        onLoginSuccess={handleFarmerLoginSuccess}
+        language={language}
+        currentFarmer={farmer}
+      />
+
+      {/* Supervisor Secure Authentication Modal (Triggered by Ctrl+Shift+A or Operator Login) */}
+      <SupervisorLoginModal
+        isOpen={isSupervisorModalOpen}
+        onClose={() => setIsSupervisorModalOpen(false)}
+        onLoginSuccess={handleSupervisorLoginSuccess}
+      />
+
+      {/* Super Admin Secure Authentication Modal (Triggered by Ctrl+Shift+S) */}
+      <SuperAdminLoginModal
+        isOpen={isSuperAdminModalOpen}
+        onClose={() => setIsSuperAdminModalOpen(false)}
+        onLoginSuccess={handleSuperAdminLoginSuccess}
+      />
+
+      {/* Controlled SIH Jury Demonstration Console Drawer (Triggered by Ctrl+Shift+D or Footer Link) */}
+      <SihDemoConsoleModal
+        isOpen={isSihDemoOpen}
+        onClose={() => setIsSihDemoOpen(false)}
+        currentFarmer={farmer}
+        activeToken={activeToken}
+        allTokens={tokens}
+        onSetFarmer={setFarmer}
+        onUpdateTokens={setTokens}
+        onAddProcurement={handleAddProcurement}
+        onUpdateDbtTransactions={setDbtTransactions}
+        onOpenSihAudit={(id) => {
+          if (id) setSelectedAuditId(id);
+          setIsSihAuditOpen(true);
+        }}
+        onResetAllState={handleResetAllState}
+      />
 
       {/* SIH Technical Architecture Inspector Modal */}
       <SihEvaluationInspector 

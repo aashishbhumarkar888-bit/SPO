@@ -30,21 +30,27 @@ import { IntegrationBadge } from '../common/IntegrationBadge';
 
 interface FarmerBookingWizardProps {
   farmer: FarmerProfile;
+  initialService?: ServiceType;
   preselectedService?: ServiceType;
   language: LanguageCode;
-  onBookingCompleted: (newToken: AgriToken) => void;
+  onBookingComplete?: (newToken: AgriToken) => void;
+  onBookingCompleted?: (newToken: AgriToken) => void;
   onCancel: () => void;
 }
 
 export const FarmerBookingWizard: React.FC<FarmerBookingWizardProps> = ({
   farmer,
+  initialService,
   preselectedService = 'MandiSlot',
   language,
+  onBookingComplete,
   onBookingCompleted,
   onCancel
 }) => {
+  const activeInitial = initialService || preselectedService;
+  const notifyComplete = onBookingComplete || onBookingCompleted || (() => {});
   const [step, setStep] = useState<number>(1);
-  const [selectedService, setSelectedService] = useState<ServiceType>(preselectedService);
+  const [selectedService, setSelectedService] = useState<ServiceType>(activeInitial);
   const [selectedCentre, setSelectedCentre] = useState<ServiceCentre>(SERVICE_CENTRES[0]);
   const [selectedSlot, setSelectedSlot] = useState<ServiceSlot>(MOCK_SLOTS[2]); // Default to smart slot
   const [approxQuintals, setApproxQuintals] = useState<number>(40);
@@ -561,7 +567,7 @@ export const FarmerBookingWizard: React.FC<FarmerBookingWizardProps> = ({
 
           <div className="flex justify-end gap-3 pt-2">
             <button
-              onClick={() => onBookingCompleted(confirmedToken)}
+              onClick={() => notifyComplete(confirmedToken)}
               className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#168A5B] hover:bg-[#0B5D3B] text-white font-bold text-sm shadow-md transition-all active:scale-95"
             >
               {language === 'hi' ? 'लाइव कतार में देखें' : 'View in Live Queue'}

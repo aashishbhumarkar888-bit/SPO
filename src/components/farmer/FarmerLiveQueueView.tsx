@@ -4,20 +4,21 @@ import {
   Clock, 
   UserCheck, 
   Scale, 
-  Banknote, 
   QrCode, 
   PhoneCall, 
-  AlertCircle, 
-  CheckCircle2, 
   ArrowRight,
-  ShieldAlert,
-  Sparkles,
-  WifiOff
+  WifiOff,
+  CheckCircle2,
+  MapPin,
+  Barcode,
+  Ticket,
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
 import { AgriToken, LanguageCode, FarmerProfile } from '../../types';
-import { TRANSLATIONS } from '../../data/agriMockData';
+import { getTranslations } from '../../i18n';
+import { normalizeStatus, STATUS_DEFINITIONS } from '../../domain/statusModel';
 import { speakAnnouncement, playAudioChime } from '../../utils/speech';
-import { IntegrationBadge } from '../common/IntegrationBadge';
 
 interface FarmerLiveQueueViewProps {
   token: AgriToken;
@@ -34,181 +35,194 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
   isOffline,
   onNavigateToTab
 }) => {
-  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const t = getTranslations(language);
+  const standardStatus = normalizeStatus(token.status);
+  const statusMeta = STATUS_DEFINITIONS[standardStatus];
 
   const handleAudioBroadcast = () => {
     playAudioChime();
-    const hi = `ध्यान दें! टोकन संख्या ${token.tokenNumber}, किसान श्री ${farmer.fullNameHi}। कृपया काउंटर नंबर ${token.counterAssigned} पर पधारें। आपसे आगे ${token.peopleAhead} किसान हैं।`;
-    const en = `Attention please! Token number ${token.tokenNumber}, ${farmer.fullName}. Please proceed to Counter ${token.counterAssigned}. There is ${token.peopleAhead} person ahead of you.`;
+    const hi = `ध्यान दें! टोकन संख्या ${token.tokenNumber}, किसान श्री ${farmer.fullNameHi}। आपका आबंटित काउंटर नंबर ${token.counterAssigned} है। वर्तमान स्थिति: ${statusMeta.labelHi}।`;
+    const en = `Attention! Token number ${token.tokenNumber}, farmer ${farmer.fullName}. Assigned Counter is number ${token.counterAssigned}. Status: ${statusMeta.labelEn}.`;
     speakAnnouncement(language === 'hi' ? hi : en, language === 'hi' ? 'hi' : 'en');
   };
 
   const steps = [
-    { title: 'Gate Inward', titleHi: 'गेट प्रवेश', done: true, current: false },
-    { title: 'Counter Verification', titleHi: 'काउंटर सत्यापन', done: token.status !== 'Waiting', current: token.status === 'Called' || token.status === 'At Counter' },
-    { title: 'Weighbridge & Lab', titleHi: 'तौल कांटा व जांच', done: token.status === 'Weighbridge' || token.status === 'DBT Released' || token.status === 'Completed', current: token.status === 'Weighbridge' },
-    { title: 'DBT Payment Advice', titleHi: 'डीबीटी भुगतान पर्ची', done: token.status === 'DBT Released' || token.status === 'Completed', current: token.status === 'DBT Released' }
+    { title: t.stepGate, done: true, current: standardStatus === 'ARRIVED' },
+    { title: t.stepCounter, done: ['IN_PROGRESS', 'COMPLETED'].includes(standardStatus), current: token.status === 'Called' || token.status === 'At Counter' },
+    { title: t.stepWeighbridge, done: standardStatus === 'COMPLETED' || token.status === 'DBT Released', current: token.status === 'Weighbridge' },
+    { title: t.stepPayment, done: standardStatus === 'COMPLETED', current: token.status === 'DBT Released' }
   ];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-      {/* Offline Mode Cache Status Banner if offline */}
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in w-full">
+      {/* Offline Mode Indicator */}
       {isOffline && (
-        <div className="p-3.5 rounded-2xl bg-amber-500 text-black border border-amber-600 flex items-center gap-3 font-semibold shadow-md">
-          <WifiOff className="w-5 h-5 flex-shrink-0 animate-pulse" />
+        <div className="p-4 rounded-xl bg-amber-400 text-slate-950 border border-amber-500 flex items-center gap-3 font-semibold shadow-sm">
+          <WifiOff className="w-5 h-5 flex-shrink-0" />
           <div className="text-xs">
-            <span className="font-bold block">Offline Pass Active (स्थानीय कैश सुरक्षित)</span>
-            <span>No internet required. Present your token number <strong>{token.tokenNumber}</strong> or SMS backup code to the Kendra officer.</span>
+            <span className="font-bold block">{t.offlineCached}</span>
+            <span>{t.offlinePassNotice} (Token: {token.tokenNumber}).</span>
           </div>
         </div>
       )}
 
-      {/* Hero Pass Header */}
-      <div className="editorial-card rounded-3xl border-2 border-[#168A5B] bg-white overflow-hidden shadow-xl">
-        <div className="bg-gradient-to-r from-[#063B2A] to-[#0B5D3B] text-white p-5 flex items-center justify-between">
+      {/* Official Government Digital E-Pass */}
+      <div className="bg-white dark:bg-[#0E241C] rounded-2xl border-2 border-[#168A5B] dark:border-[#22A872] overflow-hidden shadow-[0_8px_30px_rgba(6,59,42,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)] transition-colors">
+        {/* Pass Header Banner */}
+        <div className="bg-[#063B2A] dark:bg-[#081B13] text-white p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#0B5D3B] dark:border-[#153A2C]">
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-bold tracking-widest uppercase text-[#DDF4E9] flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                {language === 'hi' ? 'लाइव डिजिटल कतार पास' : 'Live Digital Queue Pass'}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#22A872] animate-pulse"></span>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#DDF4E9]">
+                {t.digitalPassTitle}
               </span>
-              <IntegrationBadge status="SYNCED" spec="Offline Available" featureName="Digital Pass" featureId="AUD-05" />
             </div>
-            <h3 className="text-base font-bold mt-1 text-white">
-              {language === 'hi' ? token.centreNameHi : token.centreName}
+            <h3 className="text-lg sm:text-xl font-bold text-white font-serif-display tracking-tight">
+              {language === 'hi' && token.centreNameHi ? token.centreNameHi : token.centreName}
             </h3>
+            <p className="text-xs text-white/70 flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3.5 h-3.5 text-[#22A872]" />
+              <span>Wardha Central APMC Mandi Yard • Gate Inward #1</span>
+            </p>
           </div>
 
-          <div className="text-right">
-            <span className="text-[10px] text-white/70 block">Token Number</span>
-            <span className="text-3xl sm:text-4xl font-mono-numbers font-black text-amber-300">
+          <div className="sm:text-right flex sm:flex-col items-baseline sm:items-end justify-between gap-2 bg-white/10 dark:bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-white/10">
+            <span className="text-xs text-white/70 block">{t.tokenNumber}</span>
+            <span className="text-3xl sm:text-4xl font-mono font-black text-amber-300 tracking-tight">
               {token.tokenNumber}
             </span>
           </div>
         </div>
 
-        <div className="p-5 sm:p-6 space-y-5">
-          {/* Turn status alert box */}
-          <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
-            token.status === 'Called'
-              ? 'bg-amber-50 border-amber-300 text-amber-950'
-              : token.status === 'Completed'
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
-              : 'bg-[#DDF4E9]/50 border-[#168A5B]/30 text-[#063B2A]'
-          }`}>
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                token.status === 'Called'
-                  ? 'bg-amber-500 text-white animate-bounce'
-                  : 'bg-[#168A5B] text-white'
-              }`}>
-                <UserCheck className="w-6 h-6" />
+        {/* Pass Body Content */}
+        <div className="p-5 sm:p-6 space-y-6">
+          {/* Live Status & Counter Callout */}
+          <div className="p-4 sm:p-5 rounded-xl bg-[#F4F7F5] dark:bg-[#143026] border border-[#C7DCD1] dark:border-[#2B5E4A] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-[#063B2A] dark:bg-[#081B13] text-white flex items-center justify-center flex-shrink-0 shadow-sm border border-[#168A5B]/30">
+                <UserCheck className="w-6 h-6 text-emerald-400" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-base">
-                    {token.status === 'Called' 
-                      ? (language === 'hi' ? `काउंटर ${token.counterAssigned} पर पधारें` : `Proceed to Counter ${token.counterAssigned}`) 
-                      : (language === 'hi' ? `स्थिति: ${token.status}` : `Status: ${token.status}`)}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-bold text-base text-[#063B2A] dark:text-[#F0FAF5] font-serif-display">
+                    {language === 'hi' ? statusMeta.labelHi : statusMeta.labelEn}
                   </h4>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-current">
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${statusMeta.badgeClass}`}>
                     {token.status}
                   </span>
                 </div>
-                <p className="text-xs opacity-80 mt-0.5">
+                <p className="text-xs text-[#2C5343] dark:text-[#85AFA0] mt-0.5">
                   {token.peopleAhead === 0 
-                    ? (language === 'hi' ? 'आपकी बारी आ चुकी है!' : 'It is your turn right now!') 
-                    : (language === 'hi' ? `आपसे आगे ${token.peopleAhead} किसान हैं • ~${token.estimatedWaitMins} मिनट` : `${token.peopleAhead} farmers ahead • ~${token.estimatedWaitMins} mins wait`)}
+                    ? (language === 'hi' ? 'आपकी बारी आ चुकी है! काउंटर पर रिपोर्ट करें।' : 'Your turn right now! Report to assigned counter.') 
+                    : `${token.peopleAhead} ${t.peopleAheadLabel} • ~${token.estimatedWaitMins} min est. wait`}
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={handleAudioBroadcast}
-              className="p-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-[#0B5D3B] shadow-xs active:scale-95 transition-transform"
-              title="Hear bilingual voice announcement"
-            >
-              <Volume2 className="w-5 h-5 text-[#168A5B]" />
-            </button>
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              <div className="px-3.5 py-2 rounded-xl bg-white dark:bg-[#0E241C] border border-[#C7DCD1] dark:border-[#2B5E4A] text-right shadow-xs">
+                <span className="text-[10px] text-[#57786B] dark:text-[#85AFA0] uppercase tracking-wider block font-bold">
+                  {t.counterAssignedLabel}
+                </span>
+                <span className="text-sm font-bold text-[#063B2A] dark:text-[#F0FAF5] font-mono">
+                  Counter #{token.counterAssigned}
+                </span>
+              </div>
+              <button
+                onClick={handleAudioBroadcast}
+                className="p-2.5 rounded-xl bg-white dark:bg-[#0E241C] hover:bg-slate-100 dark:hover:bg-[#1A3C2F] border border-[#C7DCD1] dark:border-[#2B5E4A] text-[#0B5D3B] dark:text-[#6EE7B7] transition-all active:scale-95 shadow-xs"
+                title="Hear audio broadcast"
+              >
+                <Volume2 className="w-5 h-5 text-[#168A5B] dark:text-[#22A872]" />
+              </button>
+            </div>
           </div>
 
           {/* Stepper Timeline */}
-          <div className="space-y-2 pt-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#063B2A]/70">
-              {language === 'hi' ? 'उपार्जन व सेवा चरण:' : 'Service Stage Timeline:'}
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#063B2A] dark:text-[#F0FAF5]">
+              {t.journeyTitle}
             </h4>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {steps.map((st, idx) => (
                 <div
                   key={idx}
                   className={`p-3 rounded-xl border text-center transition-all ${
                     st.current
-                      ? 'border-[#168A5B] bg-[#DDF4E9] ring-2 ring-[#168A5B]/30'
+                      ? 'border-[#168A5B] dark:border-[#22A872] bg-[#DDF4E9] dark:bg-[#153A2C] ring-1 ring-[#168A5B]'
                       : st.done
-                      ? 'border-emerald-200 bg-emerald-50/60 text-emerald-900'
-                      : 'border-slate-200 bg-slate-50 text-slate-400'
+                      ? 'border-[#E2ECE6] dark:border-[#1D4334] bg-[#F4F7F5] dark:bg-[#143026] text-[#063B2A] dark:text-[#F0FAF5]'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0A1C15] text-slate-400 opacity-60'
                   }`}
                 >
-                  <div className="text-xs font-bold mb-1">
+                  <div className="text-xs font-bold mb-0.5 text-[#063B2A] dark:text-[#F0FAF5]">
                     {st.done && !st.current ? '✓ ' : ''}
-                    {language === 'hi' ? st.titleHi : st.title}
+                    {st.title}
                   </div>
-                  <span className="text-[10px] font-medium block">
-                    {st.current ? 'Active Now' : st.done ? 'Completed' : 'Pending'}
+                  <span className="text-[10px] font-bold text-[#57786B] dark:text-[#85AFA0]">
+                    {st.current ? t.currentStageBadge : st.done ? t.stageCompletedBadge : t.stagePendingBadge}
                   </span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Farmer & Lot Details breakdown */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-[#F6F9F7] border border-[#E4EBE6] text-xs">
+          {/* Key Identification Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 p-4 rounded-xl bg-[#F4F7F5] dark:bg-[#143026] border border-[#C7DCD1] dark:border-[#2B5E4A] text-xs transition-colors">
             <div>
-              <span className="text-[#063B2A]/60 block font-medium">Farmer Name</span>
-              <strong className="text-[#063B2A]">{farmer.fullName}</strong>
+              <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{language === 'hi' ? 'किसान का नाम' : 'Farmer'}</span>
+              <strong className="text-[#063B2A] dark:text-[#F0FAF5]">{language === 'hi' ? farmer.fullNameHi : farmer.fullName}</strong>
             </div>
             <div>
-              <span className="text-[#063B2A]/60 block font-medium">Kisan ID</span>
-              <strong className="text-[#063B2A] font-mono">{farmer.kisanId}</strong>
+              <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{t.kisanId}</span>
+              <strong className="text-[#063B2A] dark:text-[#F0FAF5] font-mono">{farmer.kisanId}</strong>
             </div>
             <div>
-              <span className="text-[#063B2A]/60 block font-medium">Service</span>
-              <strong className="text-[#063B2A]">{token.serviceType}</strong>
+              <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{t.cropLabel}</span>
+              <strong className="text-[#063B2A] dark:text-[#F0FAF5]">
+                {language === 'hi' && token.serviceDetails?.cropNameHi ? token.serviceDetails.cropNameHi : (token.serviceDetails?.cropName || 'Wheat')}
+              </strong>
             </div>
             <div>
-              <span className="text-[#063B2A]/60 block font-medium">Scheduled</span>
-              <strong className="text-[#063B2A]">{token.scheduledTime}</strong>
+              <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{t.slotTime}</span>
+              <strong className="text-[#063B2A] dark:text-[#F0FAF5] font-mono">{token.scheduledTime}</strong>
             </div>
           </div>
 
-          {/* QR Code and Gate Barcode Footer */}
-          <div className="border-t border-[#E4EBE6] pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-xs">
+          {/* QR & Barcode Section for Fast ANPR & Gate Entry */}
+          <div className="border-t border-[#E2ECE6] dark:border-[#1D4334] pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="p-2.5 bg-white dark:bg-[#F0FAF5] rounded-xl border border-slate-300 dark:border-white shadow-xs">
                 <QrCode className="w-14 h-14 text-slate-900" />
               </div>
-              <div className="text-xs text-[#063B2A]/70">
-                <p className="font-bold text-[#063B2A]">Gate Kiosk Verification</p>
-                <p className="text-[11px]">Valid at Wardha APMC & AgriSeva Gate #1</p>
-                <p className="text-[10px] font-mono text-slate-500 mt-0.5">HASH: 8921-AS108-SECURE</p>
+              <div className="text-xs space-y-0.5">
+                <p className="font-bold text-[#063B2A] dark:text-[#F0FAF5] flex items-center gap-1.5 font-serif-display">
+                  <span>Fast-Track ANPR Gate Barcode</span>
+                  <Barcode className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                </p>
+                <p className="text-[11px] text-[#2C5343] dark:text-[#85AFA0]">
+                  {t.qrInstruction}
+                </p>
+                <p className="text-[10px] font-mono text-[#57786B] dark:text-[#85AFA0]">
+                  AUTH-KEY: SPO-WHD-{token.tokenNumber}-{farmer.kisanId}
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
               <a
-                href="tel:07152245100"
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-[#D7E3DC] hover:bg-slate-50 text-xs font-bold text-[#063B2A] flex items-center justify-center gap-1.5"
+                href="tel:18001801551"
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-[#C7DCD1] dark:border-[#2B5E4A] hover:bg-white dark:hover:bg-[#1A3C2F] text-xs font-bold text-[#063B2A] dark:text-[#F0FAF5] flex items-center justify-center gap-1.5 transition-colors"
               >
-                <PhoneCall className="w-3.5 h-3.5 text-[#168A5B]" />
-                <span>Call Helpdesk</span>
+                <PhoneCall className="w-3.5 h-3.5 text-[#168A5B] dark:text-[#22A872]" />
+                <span>{t.callSupportAction}</span>
               </a>
 
               <button
                 onClick={() => onNavigateToTab('procurement')}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#168A5B] hover:bg-[#0B5D3B] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs"
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-[#0B5D3B] hover:bg-[#063B2A] dark:bg-[#168A5B] dark:hover:bg-[#22A872] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 touch-target-48"
               >
-                <span>{language === 'hi' ? 'तौल पर्ची देखें' : 'View Weigh Slip'}</span>
+                <span>{language === 'hi' ? 'तौल पर्ची स्थिति' : 'Procurement Slip'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>

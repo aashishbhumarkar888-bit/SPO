@@ -1,6 +1,6 @@
 {
-  "name": "AgriSeva - Farmer-First Digital Agri Operations Platform",
-  "description": "Premium rural digital infrastructure empowering Indian farmers with multilingual voice assistance, smart slot booking, live mandi queue tracking, fleet dispatch, and direct DBT payments.",
+  "name": "SPO — Smart Procurement Orchestration",
+  "description": "Production-style agricultural procurement orchestration platform for Indian farmers, offering transparent slot booking, live queue pass, weighbridge verification, and direct PFMS DBT payments.",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

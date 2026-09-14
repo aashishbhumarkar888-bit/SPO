@@ -7,14 +7,15 @@ import {
   Banknote, 
   ArrowRight, 
   Volume2, 
-  Sparkles, 
   Download, 
-  ShieldCheck 
+  ShieldCheck, 
+  Building2, 
+  Calendar, 
+  Layers 
 } from 'lucide-react';
 import { ProcurementRecord, LanguageCode } from '../../types';
-import { TRANSLATIONS } from '../../data/agriMockData';
-import { speakAnnouncement } from '../../utils/speech';
-import { IntegrationBadge } from '../common/IntegrationBadge';
+import { getTranslations } from '../../i18n';
+import { speakAnnouncement, playAudioChime } from '../../utils/speech';
 
 interface FarmerProcurementViewProps {
   records: ProcurementRecord[];
@@ -28,165 +29,187 @@ export const FarmerProcurementView: React.FC<FarmerProcurementViewProps> = ({
   onNavigateToTab
 }) => {
   const activeRecord = records[0];
-  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const t = getTranslations(language);
 
   const handleSpeakSummary = () => {
     if (!activeRecord) return;
-    const hi = `उपार्जन पर्ची क्रमांक ${activeRecord.slipNumber}। फसल: ${activeRecord.cropNameHi}। कुल शुद्ध वजन ${activeRecord.netWeightQuintals} क्विंटल। नमी का स्तर ${activeRecord.moisturePercentage}% जो कि मानक ग्रेड ए के अनुकूल है। सरकारी समर्थन मूल्य ₹${activeRecord.mspPerQuintal} प्रति क्विंटल के अनुसार कुल देय राशि ₹${activeRecord.totalGrossPayable.toLocaleString('en-IN')} है।`;
-    const en = `Procurement Slip ${activeRecord.slipNumber} for ${activeRecord.cropName}. Net weight is ${activeRecord.netWeightQuintals} quintals with ${activeRecord.moisturePercentage}% moisture. Total payable amount at MSP is Rupees ${activeRecord.totalGrossPayable.toLocaleString('en-IN')}.`;
+    playAudioChime();
+    const hi = `उपार्जन तौल पर्ची क्रमांक ${activeRecord.slipNumber}। फसल ${activeRecord.cropNameHi}। शुद्ध वजन ${activeRecord.netWeightQuintals} क्विंटल। नमी ${activeRecord.moisturePercentage}%। न्यूनतम समर्थन मूल्य ₹${activeRecord.mspPerQuintal} के अनुसार कुल देय राशि ₹${Math.round(activeRecord.totalGrossPayable).toLocaleString('en-IN')} है।`;
+    const en = `Procurement weighment slip ${activeRecord.slipNumber} for ${activeRecord.cropName}. Net weight is ${activeRecord.netWeightQuintals} quintals with ${activeRecord.moisturePercentage}% moisture. Total gross payable at MSP is Rupees ${Math.round(activeRecord.totalGrossPayable).toLocaleString('en-IN')}.`;
     speakAnnouncement(language === 'hi' ? hi : en, language === 'hi' ? 'hi' : 'en');
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D7E3DC] pb-4">
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in w-full">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2ECE6] dark:border-[#1D4334] pb-4 transition-colors">
         <div>
-          <h2 className="text-xl font-bold font-serif-display text-[#063B2A]">
-            {t.procurementJourney}
+          <h2 className="text-xl sm:text-2xl font-bold font-serif-display text-[#063B2A] dark:text-[#F0FAF5]">
+            {t.weighbridgeTitle}
           </h2>
-          <p className="text-xs text-[#063B2A]/70 mt-0.5">
-            {language === 'hi' ? 'पारदर्शी तौल कांटा, नमी जांच व डीबीटी भुगतान पर्ची' : 'Transparent weighbridge weight, moisture grading & DBT receipt'}
+          <p className="text-xs text-[#2C5343] dark:text-[#85AFA0] mt-0.5">
+            {language === 'hi' ? 'मानक इलेक्ट्रॉनिक तौल कांटा (IS 9281) व गुणवत्ता सत्यापन रिकॉर्ड' : 'Electronic Weighbridge (IS 9281 Certified) & Quality Grading Record'}
           </p>
         </div>
 
-        <button
-          onClick={handleSpeakSummary}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#168A5B]/10 hover:bg-[#168A5B]/20 text-[#0B5D3B] text-xs font-bold self-start sm:self-center transition-all active:scale-95"
-        >
-          <Volume2 className="w-4 h-4 text-[#168A5B]" />
-          <span>{language === 'hi' ? 'पर्ची का ब्यौरा सुनें' : 'Listen to Slip Summary'}</span>
-        </button>
+        {activeRecord && (
+          <button
+            onClick={handleSpeakSummary}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#DDF4E9] dark:bg-[#153A2C] hover:bg-[#168A5B] dark:hover:bg-[#22A872] hover:text-white text-[#063B2A] dark:text-[#6EE7B7] text-xs font-bold self-start sm:self-center transition-all active:scale-95 shadow-xs touch-target-48"
+          >
+            <Volume2 className="w-4 h-4 text-[#168A5B] dark:text-[#34D399]" />
+            <span>{t.listenAudio}</span>
+          </button>
+        )}
       </div>
 
-      {activeRecord && (
-        <div className="editorial-card rounded-3xl border-2 border-[#168A5B] bg-white overflow-hidden shadow-xl">
-          {/* Slip Header */}
-          <div className="bg-[#063B2A] text-white p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded bg-emerald-700/80 text-emerald-100 text-[10px] font-mono uppercase font-bold">
-                  Official APMC Inward Slip
-                </span>
-                <span className="text-xs text-white/70">{activeRecord.timestamp}</span>
-                <IntegrationBadge status="LIVE" spec="IS 9281" featureName="Net Tare Engine" featureId="AUD-02" />
-              </div>
-              <h3 className="text-xl font-mono-numbers font-bold text-amber-300 mt-1">
-                {activeRecord.slipNumber}
-              </h3>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-400 text-emerald-950 font-mono">
-                {activeRecord.qualityGrade}
-              </span>
-            </div>
-          </div>
-
-          <div className="p-6 space-y-6">
-            {/* 4 Key Weight & Lab Metrics Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3.5 rounded-2xl bg-[#F6F9F7] border border-[#E4EBE6]">
-                <span className="text-xs text-[#063B2A]/60 block font-medium">Gross Weight</span>
-                <div className="flex items-baseline gap-1 mt-1">
-                  <span className="text-xl font-bold font-mono-numbers text-[#063B2A]">
-                    {activeRecord.grossWeightQuintals}
-                  </span>
-                  <span className="text-xs text-[#063B2A]/70">Qtl</span>
-                </div>
-                <span className="text-[10px] text-slate-500 mt-0.5 block">Loaded Trolley</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#F6F9F7] border border-[#E4EBE6]">
-                <span className="text-xs text-[#063B2A]/60 block font-medium">Tare Weight</span>
-                <div className="flex items-baseline gap-1 mt-1">
-                  <span className="text-xl font-bold font-mono-numbers text-[#D95353]">
-                    -{activeRecord.tareWeightQuintals}
-                  </span>
-                  <span className="text-xs text-[#063B2A]/70">Qtl</span>
-                </div>
-                <span className="text-[10px] text-slate-500 mt-0.5 block">Empty Vehicle</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-                <span className="text-xs text-emerald-800 block font-bold">Net Crop Weight</span>
-                <div className="flex items-baseline gap-1 mt-1">
-                  <span className="text-2xl font-bold font-mono-numbers text-emerald-900">
-                    {activeRecord.netWeightQuintals}
-                  </span>
-                  <span className="text-xs text-emerald-800 font-semibold">Qtl</span>
-                </div>
-                <span className="text-[10px] text-emerald-700 mt-0.5 block font-medium">Billable Crop Lot</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200">
-                <span className="text-xs text-blue-800 block font-bold">Moisture Sensor</span>
-                <div className="flex items-baseline gap-1 mt-1">
-                  <span className="text-2xl font-bold font-mono-numbers text-blue-900">
-                    {activeRecord.moisturePercentage}%
+      {activeRecord ? (
+        <div className="space-y-6">
+          {/* Main Official Weighbridge Slip */}
+          <div className="bg-white dark:bg-[#0E241C] rounded-2xl border border-[#C7DCD1] dark:border-[#2B5E4A] shadow-[0_8px_30px_rgba(6,59,42,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden transition-colors">
+            {/* Top Slip Banner */}
+            <div className="bg-[#063B2A] dark:bg-[#081B13] text-white p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#0B5D3B] dark:border-[#153A2C]">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText className="w-4 h-4 text-amber-300" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#DDF4E9]">
+                    APMC Weighment Receipt (Form 6A)
                   </span>
                 </div>
-                <span className="text-[10px] text-blue-700 mt-0.5 block font-medium">
-                  FAQ &lt;12% Approved
+                <h3 className="text-base sm:text-lg font-bold text-white font-serif-display">
+                  {language === 'hi' 
+                    ? (activeRecord.centreNameHi || 'वर्धा एपीएमसी उपार्जन केंद्र') 
+                    : (activeRecord.centreName || 'Wardha APMC Procurement Kendra')}
+                </h3>
+              </div>
+
+              <div className="sm:text-right">
+                <span className="text-[10px] text-white/70 block uppercase font-mono">{t.slipNumberLabel}</span>
+                <span className="text-lg sm:text-xl font-mono font-bold text-amber-300">
+                  {activeRecord.slipNumber}
                 </span>
               </div>
             </div>
 
-            {/* MSP Calculation Breakdown */}
-            <div className="p-5 rounded-2xl bg-[#DDF4E9]/40 border border-[#168A5B]/30 space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#0B5D3B] flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-[#168A5B]" />
-                <span>{language === 'hi' ? 'समर्थन मूल्य गणना (MSP Breakdown)' : 'Official MSP Valuation Breakdown'}</span>
-              </h4>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm border-b border-[#168A5B]/20 pb-3">
-                <span className="text-[#063B2A]">
-                  {language === 'hi' ? activeRecord.cropNameHi : activeRecord.cropName} ({activeRecord.qualityGrade})
-                </span>
-                <span className="font-mono text-[#063B2A] font-semibold">
-                  {activeRecord.netWeightQuintals} Qtl × ₹{activeRecord.mspPerQuintal}/Qtl
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <div>
-                  <span className="text-xs text-[#063B2A]/70 block">
-                    {language === 'hi' ? 'कुल देय सरकारी राशि:' : 'Total Gross Payout Payable:'}
+            <div className="p-5 sm:p-6 space-y-6">
+              {/* Weight Measurements Grid (Gross, Tare, Net) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                {/* Gross Weight */}
+                <div className="p-4 rounded-xl bg-[#F4F7F5] dark:bg-[#143026] border border-[#E2ECE6] dark:border-[#1D4334] transition-colors">
+                  <span className="text-[11px] font-bold text-[#57786B] dark:text-[#85AFA0] uppercase tracking-wide block">
+                    {t.grossWeight}
                   </span>
-                  <span className="text-2xl sm:text-3xl font-mono-numbers font-black text-[#0B5D3B]">
-                    ₹{activeRecord.totalGrossPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  <p className="text-2xl font-bold font-mono text-[#063B2A] dark:text-[#F0FAF5] mt-1">
+                    {(activeRecord.grossWeightKg ?? Math.round(activeRecord.grossWeightQuintals * 100)).toLocaleString('en-IN')} <span className="text-xs font-normal text-[#57786B] dark:text-[#85AFA0]">kg</span>
+                  </p>
+                  <span className="text-[11px] text-[#57786B] dark:text-[#85AFA0] block mt-0.5">
+                    Vehicle + Commodity
                   </span>
                 </div>
 
-                <div className="text-right">
-                  <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      {activeRecord.dbtStatus}
-                    </span>
-                    <IntegrationBadge status="INTEGRATION-READY" spec="PFMS" featureName="DBT Advice" featureId="AUD-06" />
+                {/* Tare Weight */}
+                <div className="p-4 rounded-xl bg-[#F4F7F5] dark:bg-[#143026] border border-[#E2ECE6] dark:border-[#1D4334] transition-colors">
+                  <span className="text-[11px] font-bold text-[#57786B] dark:text-[#85AFA0] uppercase tracking-wide block">
+                    {t.tareWeight}
+                  </span>
+                  <p className="text-2xl font-bold font-mono text-slate-700 dark:text-slate-300 mt-1">
+                    {(activeRecord.tareWeightKg ?? Math.round(activeRecord.tareWeightQuintals * 100)).toLocaleString('en-IN')} <span className="text-xs font-normal text-[#57786B] dark:text-[#85AFA0]">kg</span>
+                  </p>
+                  <span className="text-[11px] text-[#57786B] dark:text-[#85AFA0] block mt-0.5">
+                    Empty Tractor/Trolley
+                  </span>
+                </div>
+
+                {/* Net Weight (Dominant) */}
+                <div className="p-4 rounded-xl bg-[#DDF4E9] dark:bg-[#153A2C] border-2 border-[#168A5B] dark:border-[#22A872] transition-colors">
+                  <span className="text-[11px] font-bold text-[#063B2A] dark:text-[#F0FAF5] uppercase tracking-wide block">
+                    {t.netWeight}
+                  </span>
+                  <p className="text-2xl font-bold font-mono text-[#063B2A] dark:text-[#F0FAF5] mt-1">
+                    {activeRecord.netWeightQuintals} <span className="text-xs font-bold text-[#0B5D3B] dark:text-[#34D399]">Quintals</span>
+                  </p>
+                  <span className="text-[11px] text-[#0B5D3B] dark:text-[#34D399] font-bold block mt-0.5">
+                    ({(activeRecord.netWeightKg ?? Math.round(activeRecord.netWeightQuintals * 100)).toLocaleString('en-IN')} kg net)
+                  </span>
+                </div>
+              </div>
+
+              {/* Quality & FAQ Analysis */}
+              <div className="p-4 sm:p-5 rounded-xl bg-[#F4F7F5] dark:bg-[#143026] border border-[#C7DCD1] dark:border-[#2B5E4A] space-y-3 transition-colors">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="text-xs font-bold text-[#063B2A] dark:text-[#F0FAF5] uppercase tracking-wider font-serif-display">
+                    {language === 'hi' ? 'गुणवत्ता व नमी परीक्षण रिपोर्ट' : 'Quality & Moisture Assay Report'}
+                  </h4>
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-[#DDF4E9] dark:bg-[#153A2C] text-[#063B2A] dark:text-[#6EE7B7] border border-[#168A5B]/30">
+                    Grade {activeRecord.qualityGrade} (FAQ Passed)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-xs">
+                  <div>
+                    <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{t.cropLabel}</span>
+                    <strong className="text-[#063B2A] dark:text-[#F0FAF5]">{language === 'hi' ? activeRecord.cropNameHi : activeRecord.cropName}</strong>
                   </div>
-                  <span className="text-[11px] text-[#063B2A]/60 block mt-1 font-mono">
-                    PFMS UTR: {activeRecord.utrNumber}
-                  </span>
+                  <div>
+                    <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{t.moisturePercent}</span>
+                    <strong className="text-[#063B2A] dark:text-[#F0FAF5] font-mono">{activeRecord.moisturePercentage}% (≤ 12% Max)</strong>
+                  </div>
+                  <div>
+                    <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{t.foreignMatter}</span>
+                    <strong className="text-[#063B2A] dark:text-[#F0FAF5] font-mono">{activeRecord.foreignMatterPercentage}% (Clean)</strong>
+                  </div>
+                  <div>
+                    <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{t.mspRate}</span>
+                    <strong className="text-[#063B2A] dark:text-[#F0FAF5] font-mono">₹{activeRecord.mspPerQuintal} / Qtl</strong>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Bottom Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-              <button
-                onClick={() => onNavigateToTab('dbt')}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#168A5B] hover:bg-[#0B5D3B] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-95"
-              >
-                <Banknote className="w-4 h-4 text-amber-300" />
-                <span>{language === 'hi' ? 'डीबीटी बैंक पासबुक देखें' : 'View DBT Bank Passbook'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              {/* Net Gross Calculation */}
+              <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-r from-[#DDF4E9]/80 via-white to-[#DDF4E9]/80 dark:from-[#153A2C] dark:via-[#0E241C] dark:to-[#153A2C] border border-[#168A5B]/40 dark:border-[#22A872]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+                <div>
+                  <span className="text-[11px] font-bold text-[#57786B] dark:text-[#85AFA0] uppercase tracking-wider block">
+                    {t.totalPayable}
+                  </span>
+                  <div className="text-2xl sm:text-3xl font-bold font-mono text-[#063B2A] dark:text-[#F0FAF5] mt-0.5">
+                    ₹{Math.round(activeRecord.totalGrossPayable).toLocaleString('en-IN')}
+                  </div>
+                  <p className="text-[11px] text-[#0B5D3B] dark:text-[#34D399] mt-0.5">
+                    {language === 'hi' ? 'बिना किसी आढ़त या बिचौलिए की कटौती के सीधे बैंक खाते में देय' : 'Calculated at statutory MSP with zero intermediary deductions'}
+                  </p>
+                </div>
 
-              <div className="text-[11px] text-[#063B2A]/60 text-center sm:text-right">
-                Certified by APMC Mandi Weighbridge Operator: <strong>Sunil Meshram</strong>
+                <button
+                  onClick={() => onNavigateToTab('dbt')}
+                  className="px-6 py-3 rounded-xl bg-[#0B5D3B] hover:bg-[#063B2A] dark:bg-[#168A5B] dark:hover:bg-[#22A872] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 self-start sm:self-center touch-target-48"
+                >
+                  <span>{t.actionTrackPayment}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Slip Metadata Footer */}
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#57786B] dark:text-[#85AFA0] pt-2 border-t border-[#E2ECE6] dark:border-[#1D4334]">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#168A5B] dark:text-[#22A872]" />
+                  <span>Certified Digital Weigh Slip • APMC Mandi Inward</span>
+                </div>
+                <span className="font-mono text-[11px]">Terminal: WB-01 • Sensor SN: IS9281-2026-9812</span>
               </div>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="p-10 sm:p-14 bg-white dark:bg-[#0E241C] rounded-2xl border border-[#E2ECE6] dark:border-[#1D4334] text-center space-y-4 shadow-sm transition-colors">
+          <Scale className="w-12 h-12 text-[#57786B] dark:text-[#85AFA0] mx-auto" />
+          <h4 className="text-base sm:text-lg font-bold text-[#063B2A] dark:text-[#F0FAF5] font-serif-display">
+            {language === 'hi' ? 'कोई हालिया तौल रिकॉर्ड उपलब्ध नहीं' : 'No Weighment Record Yet'}
+          </h4>
+          <p className="text-xs sm:text-sm text-[#2C5343] dark:text-[#85AFA0] max-w-md mx-auto leading-relaxed">
+            {language === 'hi' 
+              ? 'जब आपका वाहन मंडी केंद्र पर पहुंचेगा और तौल कांटे पर वजन पूर्ण होगा, तब इलेक्ट्रॉनिक पर्ची यहां स्वतः उपलब्ध हो जाएगी।' 
+              : 'Once your vehicle reports to the Mandi Kendra and completes electronic weighment, your official receipt will appear here automatically.'}
+          </p>
         </div>
       )}
     </div>

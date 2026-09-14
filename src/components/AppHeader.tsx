@@ -1,255 +1,180 @@
 import React from 'react';
 import { 
   Sprout, 
-  Smartphone, 
-  Monitor, 
-  ShieldCheck, 
   Globe, 
   Sun, 
+  Moon, 
+  Wifi, 
   WifiOff, 
   PhoneCall, 
-  CheckCircle2,
-  Volume2
+  Building2,
+  ShieldCheck,
+  Eye,
+  User
 } from 'lucide-react';
-import { RoleMode, LanguageCode } from '../types';
-import { TRANSLATIONS } from '../data/agriMockData';
+import { LanguageCode } from '../types';
+import { getTranslations } from '../i18n';
 
 interface AppHeaderProps {
-  currentRole: RoleMode;
-  onRoleChange: (role: RoleMode) => void;
   language: LanguageCode;
   onLanguageChange: (lang: LanguageCode) => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
   outdoorMode: boolean;
   onToggleOutdoorMode: () => void;
   isOffline: boolean;
   onToggleOffline: () => void;
-  mobileFrameMode: boolean;
-  onToggleMobileFrame: () => void;
-  onOpenSihAudit?: () => void;
+  onOpenFarmerLogin?: () => void;
+  farmerName?: string;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
-  currentRole,
-  onRoleChange,
   language,
   onLanguageChange,
+  theme,
+  onToggleTheme,
   outdoorMode,
   onToggleOutdoorMode,
   isOffline,
   onToggleOffline,
-  mobileFrameMode,
-  onToggleMobileFrame,
-  onOpenSihAudit
+  onOpenFarmerLogin,
+  farmerName
 }) => {
-  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const t = getTranslations(language);
 
   return (
-    <header className="sticky top-0 z-50 bg-[#FFFFFF] border-b border-[#E4EBE6] backdrop-blur-md bg-opacity-95 shadow-[0_2px_12px_rgba(6,59,42,0.04)]">
-      {/* Top utility alert ribbon for national portal & offline status */}
-      <div className="bg-[#063B2A] text-[#DDF4E9] text-[11px] font-medium px-4 py-1.5 flex items-center justify-between border-b border-[#0B5D3B]">
-        <div className="flex items-center gap-2 max-w-7xl mx-auto w-full justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 font-semibold tracking-wide">
-              <span className="w-2 h-2 rounded-full bg-[#168A5B] animate-pulse"></span>
-              AgriSeva • भारत सरकार / Government of India (NeGPA)
+    <header className="sticky top-0 z-40 bg-white dark:bg-[#0E241C] border-b border-[#E2ECE6] dark:border-[#1D4334] shadow-[0_2px_12px_rgba(6,59,42,0.03)] dark:shadow-[0_2px_16px_rgba(0,0,0,0.4)] transition-colors w-full">
+      {/* Official National Agriculture Portal Header Strip */}
+      <div className="bg-[#063B2A] dark:bg-[#081B13] text-[#DDF4E9] text-[11px] font-medium px-4 sm:px-6 py-1.5 border-b border-[#0B5D3B] dark:border-[#153A2C] w-full">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 font-semibold tracking-wide text-[#ECF8F2]">
+              <span className="w-2 h-2 rounded-full bg-[#22A872] animate-soft-pulse"></span>
+              <span>{t.govtMinistry}</span>
             </span>
-            <span className="hidden sm:inline text-white/40">|</span>
+            <span className="hidden sm:inline text-white/30">|</span>
             <span className="hidden md:inline text-white/80">
-              Wardha District Pilot Kendra (Vidarbha Agro-Zone)
+              {language === 'hi' ? 'वर्धा मॉडल उपार्जन केंद्र (विदर्भ संभाग)' : 'Wardha Model Mandi (Vidarbha Agro-Zone)'}
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-[11px]">
-            {/* Toll-Free IVR / Call Centre */}
+          <div className="flex items-center gap-2 sm:gap-3 text-[11px]">
+            {/* Toll-Free Kisan Helpline */}
             <a 
               href="tel:18001801551" 
-              title="Kisan Call Centre Toll-Free" 
+              title={t.tollFreeLabel} 
               className="flex items-center gap-1.5 text-amber-300 hover:text-amber-200 transition-colors font-medium px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/30"
             >
               <PhoneCall className="w-3 h-3 text-amber-400" />
-              <span>1800-180-1551</span>
+              <span className="font-mono">{t.tollFree}</span>
               <span className="hidden sm:inline text-[10px] opacity-80">(Toll-Free)</span>
             </a>
 
-            {/* Offline Mode Indicator */}
+            {/* Offline Resilience Indicator */}
             <button
               onClick={onToggleOffline}
-              title="Toggle Offline Resilience Simulation"
+              title={isOffline ? "Currently running on cached local records" : "Live cloud connection active"}
               className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-all font-semibold ${
                 isOffline 
-                  ? 'bg-amber-500 text-black animate-pulse' 
+                  ? 'bg-amber-400 text-black border border-amber-600' 
                   : 'bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900 border border-emerald-500/30'
               }`}
             >
-              <WifiOff className="w-3 h-3" />
-              <span>{isOffline ? 'Offline: Cached' : 'Online Sync'}</span>
+              {isOffline ? <WifiOff className="w-3 h-3 text-black" /> : <Wifi className="w-3 h-3 text-emerald-400" />}
+              <span className="hidden xs:inline">{isOffline ? t.offlineCached : t.onlineSync}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Header Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+      {/* Main Brand, Identity & Universal Citizen Controls */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-4 w-full">
         {/* Brand identity */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#168A5B] to-[#0B5D3B] flex items-center justify-center text-white shadow-md shadow-emerald-900/10 ring-2 ring-emerald-500/20">
-            <Sprout className="w-6 h-6 text-[#DDF4E9]" />
+          <div className="w-10 h-10 rounded-xl bg-[#063B2A] dark:bg-[#143026] flex items-center justify-center text-white shadow-sm border border-[#168A5B]/40 flex-shrink-0">
+            <Sprout className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold font-serif-display text-[#063B2A] tracking-tight">
-                {t.appName}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-base sm:text-lg font-bold font-serif-display text-[#063B2A] dark:text-[#F0FAF5] tracking-tight">
+                {t.brandName}
               </h1>
-              <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#DDF4E9] text-[#0B5D3B] border border-[#168A5B]/30">
-                Kisan First
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#DDF4E9] dark:bg-[#153A2C] text-[#063B2A] dark:text-[#6EE7B7] border border-[#168A5B]/30 hidden sm:inline-block">
+                {language === 'hi' ? 'सरकारी पोर्टल' : 'Govt Portal'}
               </span>
             </div>
-            <p className="text-xs text-[#063B2A]/60 hidden sm:block">
-              {t.tagline}
+            <p className="text-[11px] text-[#2C5343] dark:text-[#85AFA0] hidden md:block">
+              {t.brandTagline}
             </p>
           </div>
         </div>
 
-        {/* Role Selector Tabs (Inspired by deliberate editorial craft) */}
-        <nav aria-label="Role Switcher" className="hidden lg:flex items-center p-1 bg-[#F0F5F2] rounded-full border border-[#D7E3DC]">
-          <button
-            onClick={() => onRoleChange('farmer')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-              currentRole === 'farmer'
-                ? 'bg-[#168A5B] text-white shadow-sm'
-                : 'text-[#063B2A]/70 hover:text-[#063B2A] hover:bg-white/60'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <div className="text-left leading-tight">
-              <span className="block font-bold">Kisan Mitra</span>
-              <span className="text-[9px] opacity-80 block font-normal">Helps Farmer • 70%</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onRoleChange('supervisor')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-              currentRole === 'supervisor'
-                ? 'bg-[#0B5D3B] text-white shadow-sm'
-                : 'text-[#063B2A]/70 hover:text-[#063B2A] hover:bg-white/60'
-            }`}
-          >
-            <Monitor className="w-3.5 h-3.5" />
-            <div className="text-left leading-tight">
-              <span className="block font-bold">Command Center</span>
-              <span className="text-[9px] opacity-80 block font-normal">Field Operations • 20%</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onRoleChange('superadmin')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-              currentRole === 'superadmin'
-                ? 'bg-[#063B2A] text-white shadow-sm'
-                : 'text-[#063B2A]/70 hover:text-[#063B2A] hover:bg-white/60'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <div className="text-left leading-tight">
-              <span className="block font-bold">Super Admin</span>
-              <span className="text-[9px] opacity-80 block font-normal">Governance • 10%</span>
-            </div>
-          </button>
-        </nav>
-
-        {/* Right Controls: SIH Audit Trigger, Mobile Toggle, Outdoor Mode, Language */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* SIH Evaluation Architecture Audit Trigger */}
-          {onOpenSihAudit && (
-            <button
-              onClick={onOpenSihAudit}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold text-xs border border-amber-300 transition-all active:scale-95 shadow-2xs"
-              title="SIH Technical Architecture Audit (Confirmed vs Integration-Ready)"
-            >
-              <ShieldCheck className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <span className="hidden sm:inline">SIH Tech Audit</span>
-            </button>
-          )}
-
-          {/* Mobile frame toggle (for testing mobile-first farmer view on wide screens) */}
-          {currentRole === 'farmer' && (
-            <button
-              onClick={onToggleMobileFrame}
-              title={mobileFrameMode ? "Switch to Responsive View" : "Switch to Mobile Device Preview"}
-              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                mobileFrameMode 
-                  ? 'bg-[#168A5B] text-white border-[#168A5B]' 
-                  : 'bg-white text-[#063B2A] border-[#D7E3DC] hover:bg-[#F0F5F2]'
-              }`}
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span className="text-[11px]">{mobileFrameMode ? "Mobile Frame" : "Wide View"}</span>
-            </button>
-          )}
-
-          {/* Outdoor Sunlight Contrast Toggle */}
+        {/* Global Controls: Theme Toggle, Sunlight/Outdoor Mode, Language Selector */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Outdoor Sunlight Mode (High-contrast for bright outdoors) */}
           <button
             onClick={onToggleOutdoorMode}
-            title="Toggle Outdoor Glare High-Contrast Mode (धूप में स्पष्ट देखें)"
-            className={`p-2 rounded-lg text-xs border transition-colors ${
+            title={outdoorMode ? t.outdoorModeActive : t.outdoorMode}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
               outdoorMode 
-                ? 'bg-amber-400 text-black border-black font-bold' 
-                : 'bg-white text-[#063B2A] border-[#D7E3DC] hover:bg-[#F0F5F2]'
+                ? 'bg-amber-400 text-black border-black shadow-sm ring-2 ring-amber-500' 
+                : 'bg-[#F4F7F5] dark:bg-[#143026] text-[#063B2A] dark:text-[#ECF8F2] border-[#C7DCD1] dark:border-[#2B5E4A] hover:bg-white dark:hover:bg-[#1A3C2F]'
             }`}
           >
-            <Sun className="w-4 h-4" />
+            <Eye className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <span className="hidden sm:inline">{t.outdoorMode}</span>
           </button>
 
-          {/* Multilingual Selector */}
+          {/* Theme Toggle (Light / Dark Mode) */}
+          <button
+            onClick={onToggleTheme}
+            title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            aria-label="Toggle visual theme"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-[#C7DCD1] dark:border-[#2B5E4A] bg-[#F4F7F5] dark:bg-[#143026] text-[#063B2A] dark:text-[#ECF8F2] hover:bg-white dark:hover:bg-[#1A3C2F] transition-all"
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-300" />
+                <span className="hidden md:inline">{language === 'hi' ? 'लाइट मोड' : 'Light'}</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-emerald-800" />
+                <span className="hidden md:inline">{language === 'hi' ? 'डार्क मोड' : 'Dark'}</span>
+              </>
+            )}
+          </button>
+
+          {/* Multilingual Selector with Genuine State Change */}
           <div className="relative flex items-center">
-            <Globe className="w-3.5 h-3.5 absolute left-2.5 text-[#0B5D3B] pointer-events-none" />
+            <Globe className="w-3.5 h-3.5 absolute left-2.5 text-[#0B5D3B] dark:text-[#6EE7B7] pointer-events-none" />
             <select
               value={language}
               onChange={(e) => onLanguageChange(e.target.value as LanguageCode)}
-              className="pl-7 pr-4 py-1.5 text-xs font-semibold bg-white border border-[#D7E3DC] rounded-lg text-[#063B2A] focus:outline-none focus:ring-2 focus:ring-[#168A5B] cursor-pointer"
+              aria-label={t.languageSelect}
+              className="pl-7 pr-3 py-1.5 text-xs font-semibold bg-[#F4F7F5] dark:bg-[#143026] hover:bg-white dark:hover:bg-[#1A3C2F] border border-[#C7DCD1] dark:border-[#2B5E4A] rounded-lg text-[#063B2A] dark:text-[#ECF8F2] focus:outline-none focus:ring-2 focus:ring-[#168A5B] cursor-pointer transition-colors"
             >
-              <option value="hi">हिन्दी (Hindi)</option>
-              <option value="en">English</option>
-              <option value="mr">मराठी (Marathi)</option>
-              <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+              <option value="hi" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">हिन्दी (Hindi)</option>
+              <option value="en" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">English</option>
+              <option value="mr" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">मराठी (Marathi)</option>
+              <option value="pa" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">ਪੰਜਾਬੀ (Punjabi)</option>
             </select>
           </div>
-        </div>
-      </div>
 
-      {/* Mobile/Tablet Role Switcher Drawer Bar */}
-      <div className="lg:hidden px-4 py-2 border-t border-[#E4EBE6] bg-[#F6F9F7] flex items-center justify-around gap-1">
-        <button
-          onClick={() => onRoleChange('farmer')}
-          className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold text-center transition-colors ${
-            currentRole === 'farmer'
-              ? 'bg-[#168A5B] text-white'
-              : 'text-[#063B2A] bg-white border border-[#D7E3DC]'
-          }`}
-        >
-          Kisan Mitra (70%)
-        </button>
-        <button
-          onClick={() => onRoleChange('supervisor')}
-          className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold text-center transition-colors ${
-            currentRole === 'supervisor'
-              ? 'bg-[#0B5D3B] text-white'
-              : 'text-[#063B2A] bg-white border border-[#D7E3DC]'
-          }`}
-        >
-          Command Center (20%)
-        </button>
-        <button
-          onClick={() => onRoleChange('superadmin')}
-          className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold text-center transition-colors ${
-            currentRole === 'superadmin'
-              ? 'bg-[#063B2A] text-white'
-              : 'text-[#063B2A] bg-white border border-[#D7E3DC]'
-          }`}
-        >
-          Super Admin (10%)
-        </button>
+          {/* Citizen Farmer Login / Account Action */}
+          {onOpenFarmerLogin && (
+            <button
+              onClick={onOpenFarmerLogin}
+              title={farmerName ? `Signed in as ${farmerName}` : "Kisan Sign In"}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#E7F7EF] dark:bg-[#143026] text-[#0B5D3B] dark:text-[#6EE7B7] border border-[#98BFA9] dark:border-[#2B5E4A] hover:bg-[#D4EFE0] dark:hover:bg-[#1A3C2F] transition-all shadow-2xs"
+            >
+              <User className="w-3.5 h-3.5 text-[#168A5B] flex-shrink-0" />
+              <span className="hidden sm:inline font-bold">
+                {farmerName ? farmerName.split(' ')[0] : (language === 'hi' ? 'किसान लॉगिन' : 'Kisan Login')}
+              </span>
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );

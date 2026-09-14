@@ -2,17 +2,15 @@ import React, { useState } from 'react';
 import { 
   Play, 
   RotateCcw, 
-  Clock, 
   CheckCircle, 
-  AlertTriangle, 
-  Scale, 
-  CreditCard, 
-  CheckCheck,
-  RefreshCw,
-  ChevronDown, 
-  ChevronUp, 
-  Sparkles,
-  Info
+  X, 
+  Info, 
+  ShieldCheck, 
+  Zap, 
+  Clock,
+  Scale,
+  CreditCard,
+  Building2
 } from 'lucide-react';
 import { FarmerProfile, AgriToken, ProcurementRecord, DbtTransaction } from '../../types';
 import { RAMESH_KUMAR_SIH_DEMO, RAMESH_KUMAR_DEMO_TOKEN } from '../../data/agriMockData';
@@ -22,10 +20,13 @@ import { notificationService } from '../../services/notificationService';
 import { auditLogger } from '../../domain/auditLog';
 import { eventBus } from '../../services/eventBus';
 import { playAudioChime } from '../../utils/speech';
+import { DemoCredentialsDirectory } from '../common/DemoCredentialsDirectory';
 
-interface SihDemoBarProps {
+interface SihDemoConsoleModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   currentFarmer: FarmerProfile;
-  activeToken: AgriToken;
+  activeToken?: AgriToken;
   allTokens: AgriToken[];
   onSetFarmer: (farmer: FarmerProfile) => void;
   onUpdateTokens: (tokens: AgriToken[]) => void;
@@ -35,7 +36,9 @@ interface SihDemoBarProps {
   onResetAllState?: () => void;
 }
 
-export const SihDemoBar: React.FC<SihDemoBarProps> = ({
+export const SihDemoConsoleModal: React.FC<SihDemoConsoleModalProps> = ({
+  isOpen,
+  onClose,
   currentFarmer,
   activeToken,
   allTokens,
@@ -46,8 +49,10 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
   onOpenSihAudit,
   onResetAllState
 }) => {
-  const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const [simulationStatus, setSimulationStatus] = useState<string>('Ready for demonstration');
+  const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
+
+  if (!isOpen) return null;
 
   const isRameshKumarActive = currentFarmer.kisanId === 'F-10234';
 
@@ -79,7 +84,17 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
       reason: 'SIH Scenario Initialized: Ramesh Kumar (F-10234, Rampur, Wheat 80Q, Centre A, 10:30 AM, Queue 11/18, 18 min, ₹24,000)'
     });
 
-    setSimulationStatus('Initialized: Ramesh Kumar | F-10234 | Rampur | Wheat 80Q | Centre A | 10:30 AM | Queue 11/18 | 18m | ₹24,000');
+    notificationService.send({
+      type: 'QUEUE_UPDATED',
+      title: 'SIH Demo Initialized',
+      titleHi: 'एसआईएच डेमो प्रारंभ',
+      body: 'Loaded deterministic Ramesh Kumar (Wheat, 80 Quintals) test scenario.',
+      bodyHi: 'रमेश कुमार (गेहूं, 80 क्विंटल) परीक्षण परिदृश्य लोड किया गया।',
+      channel: 'APP'
+    });
+
+    setActiveStepIndex(1);
+    setSimulationStatus('Initialized: Ramesh Kumar | F-10234 | Rampur | Wheat 80Q | Centre A | 10:30 AM | Queue 11/18 | 18m');
     playAudioChime();
   };
 
@@ -112,7 +127,7 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
       reason: `Gate Inward arrival verified for ${token.farmerName} (${token.tokenNumber}) at Counter #2`
     });
 
-    eventBus.publish('farmer.arrived', { tokenId: token.id }, 'SihDemoBar');
+    eventBus.publish('farmer.arrived', { tokenId: token.id }, 'SihDemoConsoleModal');
     notificationService.send({
       type: 'QUEUE_UPDATED',
       title: 'Gate Arrival Confirmed',
@@ -122,11 +137,12 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
       channel: 'APP'
     });
 
+    setActiveStepIndex(2);
     setSimulationStatus(`Gate Arrival: ${token.farmerName} verified at Gate Inward -> Counter #2`);
     playAudioChime();
   };
 
-  // 3. Late Arrival
+  // 3. Late Arrival & Grace Period Requeue
   const handleLateArrival = () => {
     const token = activeToken || RAMESH_KUMAR_DEMO_TOKEN;
     const result = allocationService.handleLateArrival(token, allTokens);
@@ -154,21 +170,23 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
       channel: 'APP'
     });
 
+    setActiveStepIndex(3);
     setSimulationStatus(`Late Arrival: Token ${token.tokenNumber} requeued to Position #${result.newPosition} (24h Grace Active)`);
     playAudioChime();
   };
 
-  // 4. Requeue
-  const handleRequeue = () => {
+  // 4. Fast-Track Priority / Token Called
+  const handleFastTrack = () => {
     const token = activeToken || RAMESH_KUMAR_DEMO_TOKEN;
-    const newAhead = (token.peopleAhead || 0) + 2;
-    const newWait = (token.estimatedWaitMins || 0) + 12;
     const updated = allTokens.map(t => {
       if (t.id === token.id) {
         return {
           ...t,
-          peopleAhead: newAhead,
-          estimatedWaitMins: newWait
+          priority: true,
+          status: 'Called' as const,
+          peopleAhead: 0,
+          estimatedWaitMins: 0,
+          counterAssigned: 2
         };
       }
       return t;
@@ -178,62 +196,26 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
     auditLogger.record({
       actorId: 'SUP-WRD-01',
       actorRole: 'SUPERVISOR',
-      action: 'QUEUE_REORDERED',
+      action: 'TOKEN_CALLED',
       entity: 'Queue',
       entityId: token.id,
-      before: { peopleAhead: token.peopleAhead },
-      after: { peopleAhead: newAhead, estimatedWaitMins: newWait },
+      after: { counterAssigned: 2, priority: true },
       source: 'SIMULATION',
-      reason: 'Dynamic requeue applied for gate traffic balancing (+2 slots)'
+      reason: `Supervisor fast-tracked and called token ${token.tokenNumber} to Counter #2`
     });
 
-    setSimulationStatus(`Requeued: Token ${token.tokenNumber} shifted +2 slots (${newAhead} ahead, ~${newWait}m)`);
+    setActiveStepIndex(4);
+    setSimulationStatus(`Fast-Track Priority: Token ${token.tokenNumber} called to Counter #2`);
     playAudioChime();
   };
 
-  // 5. Queue Progress
-  const handleQueueProgress = () => {
-    const token = activeToken || RAMESH_KUMAR_DEMO_TOKEN;
-    const newWait = Math.max(0, token.estimatedWaitMins - 6);
-    const newAhead = Math.max(0, token.peopleAhead - 1);
-    const newStatus = newAhead === 0 ? 'Called' : token.status;
-    const updated = allTokens.map(t => {
-      if (t.id === token.id) {
-        return {
-          ...t,
-          peopleAhead: newAhead,
-          estimatedWaitMins: newWait,
-          status: newStatus
-        };
-      }
-      return t;
-    });
-    onUpdateTokens(updated);
-
-    if (newAhead === 0) {
-      auditLogger.record({
-        actorId: 'SUP-WRD-01',
-        actorRole: 'SUPERVISOR',
-        action: 'TOKEN_CALLED',
-        entity: 'Queue',
-        entityId: token.id,
-        after: { counterAssigned: token.counterAssigned || 2 },
-        source: 'SIMULATION',
-        reason: `Token ${token.tokenNumber} called to Counter #${token.counterAssigned || 2}`
-      });
-    }
-
-    setSimulationStatus(`Queue Progress: ${newAhead} ahead | Estimated wait: ${newWait} mins`);
-    playAudioChime();
-  };
-
-  // 6. Weighbridge (IS 9281 Standard)
+  // 5. Electronic Weighbridge (IS 9281 Standard)
   const handleWeighbridge = () => {
     const token = activeToken || RAMESH_KUMAR_DEMO_TOKEN;
     const calc = WeighbridgeService.calculate({
       grossWeightKg: 10450,
-      tareWeightKg: 2450, // Net = 8000 kg = 80 Quintal
-      cropName: token?.serviceDetails?.cropName || 'Wheat (Sharbati)',
+      tareWeightKg: 2450,
+      cropName: token.serviceDetails?.cropName || 'Wheat (Sharbati)',
       moisturePercentage: 11.2,
       foreignMatterPercentage: 1.4,
       mspPerQuintal: 2275
@@ -278,11 +260,12 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
       reason: 'Electronic weighbridge gross & tare weights verified per IS 9281 standards'
     });
 
+    setActiveStepIndex(5);
     setSimulationStatus(`Weighbridge: Slip #${calc.slipNumber} | Gross: 10,450kg | Tare: 2,450kg | Net: 80.0Q (Moisture 11.2%)`);
     playAudioChime();
   };
 
-  // 7. Procurement Complete
+  // 6. Procurement Completion (Slip Generated)
   const handleProcurementComplete = () => {
     const token = activeToken || RAMESH_KUMAR_DEMO_TOKEN;
     const slipNumber = `WB-2026-${Date.now().toString().slice(-4)}`;
@@ -295,6 +278,11 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
       kisanId: currentFarmer.kisanId,
       cropName: token.serviceDetails?.cropName || 'Wheat (Sharbati)',
       cropNameHi: token.serviceDetails?.cropNameHi || 'गेहूं (शरबती)',
+      centreName: 'Wardha APMC Central Yard',
+      centreNameHi: 'वर्धा एपीएमसी मुख्य मंडी केंद्र',
+      grossWeightKg: 10450,
+      tareWeightKg: 2450,
+      netWeightKg: 8000,
       grossWeightQuintals: 104.5,
       tareWeightQuintals: 24.5,
       netWeightQuintals: 80.0,
@@ -310,7 +298,6 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
 
     onAddProcurement(newProcurement);
 
-    // Update token status to Completed
     const updated = allTokens.map(t => t.id === token.id ? { ...t, status: 'Completed' as const, peopleAhead: 0, estimatedWaitMins: 0 } : t);
     onUpdateTokens(updated);
 
@@ -339,11 +326,12 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
       channel: 'APP'
     });
 
+    setActiveStepIndex(6);
     setSimulationStatus(`Procurement Complete: Slip #${slipNumber} | 80Q Wheat | DBT Advice: ₹24,000 Generated`);
     playAudioChime();
   };
 
-  // 8. DBT Event (PFMS Direct Benefit Transfer Credit)
+  // 7. Direct Benefit Transfer (DBT Credit via PFMS)
   const handleDbtEvent = () => {
     const utr = `PFMSSBI${Date.now().toString().slice(-8)}`;
     onUpdateDbtTransactions(prev => {
@@ -381,174 +369,220 @@ export const SihDemoBar: React.FC<SihDemoBarProps> = ({
 
     eventBus.publish('payment.updated', { 
       amount: 24000, 
-      utrNumber: utr 
-    }, 'SihDemoBar');
+      utr, 
+      bank: currentFarmer.bankName 
+    }, 'SihDemoConsoleModal');
 
     notificationService.send({
       type: 'PAYMENT_UPDATED',
-      title: 'DBT Payout Credited: ₹24,000',
+      title: 'DBT Payment Credited: ₹24,000',
       titleHi: 'डीबीटी भुगतान जमा: ₹24,000',
-      body: `₹24,000 credited to ${currentFarmer.bankName} (${currentFarmer.bankAccount}). UTR: ${utr}.`,
+      body: `₹24,000 credited to ${currentFarmer.bankName} account via PFMS. UTR: ${utr}.`,
       bodyHi: `₹24,000 आपके ${currentFarmer.bankName} खाते में जमा किए गए। यूटीआर: ${utr}।`,
-      channel: 'APP'
+      channel: 'SMS'
     });
 
-    setSimulationStatus(`DBT Event: ₹24,000 credited to ${currentFarmer.bankAccount} (${currentFarmer.bankName}) | UTR: ${utr}`);
+    setActiveStepIndex(7);
+    setSimulationStatus(`DBT Credited: ₹24,000 sent to ${currentFarmer.bankName} (${currentFarmer.bankAccount}) | UTR: ${utr}`);
     playAudioChime();
   };
 
-  // 9. Deterministic RESET DEMO
-  const handleResetDemo = () => {
+  // Reset Demo
+  const handleReset = () => {
     if (onResetAllState) {
       onResetAllState();
-    } else {
-      localStorage.removeItem('agriseva_farmer');
-      localStorage.removeItem('agriseva_tokens');
-      localStorage.removeItem('agriseva_procurements');
-      localStorage.removeItem('agriseva_dbt');
-      localStorage.removeItem('agriseva_fleet');
-      window.location.reload();
     }
-    setSimulationStatus('RESET DEMO: All booking, queue, arrival, weighbridge, payment & audit states restored to canonical baseline.');
+    setActiveStepIndex(0);
+    setSimulationStatus('Demo environment reset to baseline.');
     playAudioChime();
   };
 
+  const steps = [
+    {
+      num: '01',
+      title: 'Initialize Scenario',
+      desc: 'Load Ramesh Kumar (Wheat, 80 Quintals, Token #TOK-WRD-042)',
+      action: handleInitialize,
+      btnLabel: isRameshKumarActive ? 'Scenario Loaded' : 'Load Ramesh Kumar'
+    },
+    {
+      num: '02',
+      title: 'Gate Arrival Inward',
+      desc: 'Simulate vehicle arriving at Wardha Kendra; assign to Counter #2',
+      action: handleGateArrival,
+      btnLabel: 'Trigger Gate Inward'
+    },
+    {
+      num: '03',
+      title: 'Late Arrival & Grace',
+      desc: 'Simulate late arrival; statutory 24-hour grace applied without forfeiture',
+      action: handleLateArrival,
+      btnLabel: 'Simulate Late (+24h Grace)'
+    },
+    {
+      num: '04',
+      title: 'Fast-Track Priority',
+      desc: 'Supervisor priority override + calling token to Counter #2',
+      action: handleFastTrack,
+      btnLabel: 'Fast-Track & Call'
+    },
+    {
+      num: '05',
+      title: 'IS 9281 Weighbridge',
+      desc: 'Electronic Gross (10,450kg) & Tare (2,450kg) = Net 80.0Q (Moisture 11.2%)',
+      action: handleWeighbridge,
+      btnLabel: 'Record Weights'
+    },
+    {
+      num: '06',
+      title: 'Complete Procurement',
+      desc: 'Generate official Form 6A Weighment Slip & create ₹24,000 DBT advice',
+      action: handleProcurementComplete,
+      btnLabel: 'Generate Slip & DBT Advice'
+    },
+    {
+      num: '07',
+      title: 'DBT Credit via PFMS',
+      desc: 'Credit ₹24,000 directly to farmer bank account via NPCI APBS',
+      action: handleDbtEvent,
+      btnLabel: 'Simulate PFMS Credit'
+    }
+  ];
+
   return (
-    <div className="w-full bg-[#063B2A] text-white border-b border-emerald-500/30 px-3 sm:px-4 py-2 transition-all">
-      <div className="max-w-7xl mx-auto flex flex-col gap-2">
-        {/* Top Header Row */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 font-mono text-[11px] font-bold border border-amber-400/30 uppercase tracking-wide flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-300" />
-              DEMO SIMULATION
-            </span>
-            <span className="text-xs text-white/90 font-medium hidden sm:inline">
-              SIH Deterministic Scenario Controller
-            </span>
-            <span className="text-xs text-emerald-300/80 font-mono truncate max-w-md">
-              • {simulationStatus}
-            </span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Modal Header */}
+        <div className="bg-[#063B2A] text-white p-5 flex items-center justify-between border-b border-[#0B5D3B]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-300/40 text-amber-300 flex items-center justify-center">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-400 text-slate-950 uppercase tracking-wide">
+                  DEMO SIMULATION
+                </span>
+                <span className="text-xs text-white/70">Controlled SIH Jury Evaluation Console</span>
+              </div>
+              <h3 className="text-lg font-bold font-serif-display text-white mt-0.5">
+                SPO — Deterministic SIH Demonstration Scenario
+              </h3>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Live Simulation Status Banner */}
+        <div className="px-6 py-3 bg-[#DDF4E9] border-b border-[#168A5B]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#063B2A]">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#168A5B] animate-pulse"></span>
+            <span className="font-mono">{simulationStatus}</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => onOpenSihAudit()}
-              className="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 flex items-center gap-1.5 transition-colors"
-              title="Open SIH Technical Audit Matrix"
+              className="flex items-center gap-1 px-3 py-1 rounded-lg bg-white border border-[#168A5B]/40 text-[#063B2A] text-xs font-bold hover:bg-[#F6F9F7] transition-all"
             >
-              <Info className="w-3.5 h-3.5 text-amber-300" />
-              <span className="font-semibold">Audit Matrix</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-[#168A5B]" />
+              <span>Tech Audit Matrix</span>
             </button>
-
             <button
-              onClick={() => setIsExpanded(prev => !prev)}
-              className="text-xs p-1 text-white/70 hover:text-white rounded hover:bg-white/10 transition-colors"
-              aria-label={isExpanded ? 'Collapse SIH Demo Bar' : 'Expand SIH Demo Bar'}
+              onClick={handleReset}
+              className="flex items-center gap-1 px-3 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-bold hover:bg-red-100 transition-all"
             >
-              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset State</span>
             </button>
           </div>
         </div>
 
-        {/* Collapsible Action Buttons Row */}
-        {isExpanded && (
-          <div className="pt-1 pb-1 flex items-center gap-1.5 sm:gap-2 flex-wrap text-xs">
-            {/* 1. Initialize */}
-            <button
-              onClick={handleInitialize}
-              className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-colors ${
-                isRameshKumarActive 
-                  ? 'bg-amber-400 text-black border-amber-300 shadow-sm font-bold'
-                  : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
-              }`}
-              title="Initialize Canonical Scenario: Ramesh Kumar | F-10234 | Rampur | Wheat 80Q | Centre A | 10:30 AM | Queue 11/18 | 18m | ₹24,000"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>1. Initialize</span>
-            </button>
+        {/* Step-by-Step Execution Sequence */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Demo Credentials Directory for Evaluators */}
+          <DemoCredentialsDirectory
+            defaultExpanded={false}
+          />
 
-            {/* 2. Gate Arrival */}
-            <button
-              onClick={handleGateArrival}
-              className="px-2.5 py-1.5 rounded-lg bg-emerald-700/60 hover:bg-emerald-600/70 text-white border border-emerald-400/40 flex items-center gap-1.5 transition-colors"
-              title="Mark arrival at Gate Inward and assign counter"
-            >
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-300" />
-              <span>2. Gate Arrival</span>
-            </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {steps.map((s, idx) => {
+              const isCompleted = activeStepIndex > idx;
+              const isCurrent = activeStepIndex === idx;
 
-            {/* 3. Late Arrival */}
-            <button
-              onClick={handleLateArrival}
-              className="px-2.5 py-1.5 rounded-lg bg-amber-600/40 hover:bg-amber-500/50 text-white border border-amber-400/40 flex items-center gap-1.5 transition-colors"
-              title="Simulate late arrival: dynamic requeue with 24-hour statutory grace period"
-            >
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-300" />
-              <span>3. Late Arrival</span>
-            </button>
+              return (
+                <div
+                  key={s.num}
+                  className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                    isCurrent
+                      ? 'bg-amber-50/50 border-amber-300 ring-2 ring-amber-400/20'
+                      : isCompleted
+                      ? 'bg-[#F6F9F7] border-emerald-300/60'
+                      : 'bg-white border-slate-200 opacity-90'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-xs font-mono font-bold text-slate-500">
+                        STEP {s.num}
+                      </span>
+                      {isCompleted ? (
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>Executed</span>
+                        </span>
+                      ) : isCurrent ? (
+                        <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wide">
+                          Recommended Next
+                        </span>
+                      ) : null}
+                    </div>
 
-            {/* 4. Requeue */}
-            <button
-              onClick={handleRequeue}
-              className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center gap-1.5 transition-colors"
-              title="Dynamically requeue slot (+2 positions) for gate congestion load balancing"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-amber-300" />
-              <span>4. Requeue</span>
-            </button>
+                    <h4 className="font-bold text-sm text-[#063B2A]">{s.title}</h4>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">{s.desc}</p>
+                  </div>
 
-            {/* 5. Queue Progress */}
-            <button
-              onClick={handleQueueProgress}
-              className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center gap-1.5 transition-colors"
-              title="Advance queue by 1 step (-1 ahead, -6 mins)"
-            >
-              <Clock className="w-3.5 h-3.5 text-sky-300" />
-              <span>5. Queue Progress</span>
-            </button>
-
-            {/* 6. Weighbridge */}
-            <button
-              onClick={handleWeighbridge}
-              className="px-2.5 py-1.5 rounded-lg bg-teal-700/60 hover:bg-teal-600/70 text-white border border-teal-400/40 flex items-center gap-1.5 transition-colors"
-              title="Record IS 9281 electronic weighbridge gross & tare weights (Net: 80 Quintals)"
-            >
-              <Scale className="w-3.5 h-3.5 text-teal-300" />
-              <span>6. Weighbridge</span>
-            </button>
-
-            {/* 7. Procurement Complete */}
-            <button
-              onClick={handleProcurementComplete}
-              className="px-2.5 py-1.5 rounded-lg bg-cyan-700/60 hover:bg-cyan-600/70 text-white border border-cyan-400/40 flex items-center gap-1.5 transition-colors"
-              title="Complete procurement and generate PFMS DBT Advice for ₹24,000"
-            >
-              <CheckCheck className="w-3.5 h-3.5 text-cyan-300" />
-              <span>7. Procurement Complete</span>
-            </button>
-
-            {/* 8. DBT Event */}
-            <button
-              onClick={handleDbtEvent}
-              className="px-2.5 py-1.5 rounded-lg bg-blue-700/60 hover:bg-blue-600/70 text-white border border-blue-400/40 flex items-center gap-1.5 transition-colors"
-              title="Direct Benefit Transfer: credit ₹24,000 to registered bank account via PFMS"
-            >
-              <CreditCard className="w-3.5 h-3.5 text-blue-300" />
-              <span>8. DBT Event</span>
-            </button>
-
-            {/* Deterministic RESET DEMO */}
-            <button
-              onClick={handleResetDemo}
-              className="px-2.5 py-1.5 rounded-lg bg-red-900/60 hover:bg-red-800/70 text-red-200 border border-red-500/40 flex items-center gap-1 sm:ml-auto transition-colors font-semibold"
-              title="RESET DEMO: deterministic reset of booking, queue, arrival, weighbridge, payment, notifications, and audit"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-red-300" />
-              <span>RESET DEMO</span>
-            </button>
+                  <div className="mt-4 pt-3 border-t border-slate-100">
+                    <button
+                      onClick={s.action}
+                      className={`w-full py-2 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-transform active:scale-95 ${
+                        isCurrent
+                          ? 'bg-[#063B2A] hover:bg-[#0B5D3B] text-white shadow-sm'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                      }`}
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>{s.btnLabel}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
+
+        {/* Modal Footer with Instructions */}
+        <div className="p-4 bg-[#F6F9F7] border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-[#168A5B]" />
+            <span>
+              All demo actions update the canonical system state and reflect across Farmer, Supervisor, and DBT ledgers simultaneously.
+            </span>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 font-bold text-slate-800 transition-colors"
+          >
+            Close Drawer
+          </button>
+        </div>
       </div>
     </div>
   );

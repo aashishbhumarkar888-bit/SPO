@@ -1,26 +1,116 @@
 @import "tailwindcss";
 
+/* Typography imports */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap');
+
 :root {
-  --agri-primary: #168A5B;
+  /* Colors - Light-First Theme (Warm White / Light Sage & Deep Forest Green) */
+  --bg-canvas: #F5F8F6;
+  --bg-surface: #FFFFFF;
+  --bg-surface-subtle: #EDF4F0;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-surface-inset: #E5EFE9;
+  
+  --text-primary: #083324;
+  --text-secondary: #1F4A38;
+  --text-muted: #4A6E5E;
+  --text-subtle: #7A9B8D;
+  
+  --border-subtle: #DCE7E1;
+  --border-medium: #C2D8CD;
+  --border-strong: #98BFA9;
+
+  --agri-deep: #083324;
   --agri-forest: #0B5D3B;
-  --agri-deep: #063B2A;
-  --agri-bg: #F6F9F7;
-  --agri-surface: #FFFFFF;
-  --agri-mint: #DDF4E9;
-  --agri-blue: #2878C8;
-  --agri-purple: #7866D8;
-  --agri-amber: #D99121;
-  --agri-red: #D95353;
+  --agri-primary: #168A5B;
+  --agri-mint: #E7F7EF;
+  --agri-mint-text: #0B5D3B;
+
+  --accent-blue: #1D68BD;
+  --accent-blue-bg: #EFF6FF;
+  --accent-blue-border: #BFDBFE;
+  
+  --accent-amber: #B45309;
+  --accent-amber-bg: #FFFBEB;
+  --accent-amber-border: #FDE68A;
+
+  --accent-red: #B91C1C;
+  --accent-red-bg: #FEF2F2;
+  --accent-red-border: #FECACA;
+
+  --shadow-subtle: 0 1px 3px rgba(8, 51, 36, 0.04);
+  --shadow-card: 0 2px 8px -1px rgba(8, 51, 36, 0.05);
+  --shadow-hover: 0 8px 20px -4px rgba(8, 51, 36, 0.08);
+
   --font-serif: 'Fraunces', Georgia, serif;
   --font-sans: 'Plus Jakarta Sans', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
+/* Dark Theme (Obsidian Forest & Luminous Mineral Green) */
+.dark {
+  --bg-canvas: #071711;
+  --bg-surface: #0E241C;
+  --bg-surface-subtle: #143026;
+  --bg-surface-elevated: #1A3C2F;
+  --bg-surface-inset: #0A1C15;
+
+  --text-primary: #F0FAF5;
+  --text-secondary: #BBDCD0;
+  --text-muted: #85AFA0;
+  --text-subtle: #567C6E;
+
+  --border-subtle: #1D4334;
+  --border-medium: #2B5E4A;
+  --border-strong: #3D7E64;
+
+  --agri-deep: #0E241C;
+  --agri-forest: #168A5B;
+  --agri-primary: #22A872;
+  --agri-mint: #153A2C;
+  --agri-mint-text: #6EE7B7;
+
+  --accent-blue: #4D9DE0;
+  --accent-purple: #9585F2;
+  --accent-amber: #F5A623;
+  --accent-red: #EF5350;
+  --accent-emerald: #34D399;
+
+  --shadow-subtle: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 4px 24px -2px rgba(0, 0, 0, 0.55);
+  --shadow-hover: 0 12px 32px -4px rgba(0, 0, 0, 0.7);
+}
+
+/* Field / Sunlight High-Contrast Mode */
+.outdoor-contrast-mode {
+  --bg-canvas: #FFFFFF !important;
+  --bg-surface: #FFFFFF !important;
+  --bg-surface-subtle: #F0F0F0 !important;
+  --bg-surface-elevated: #FFFFFF !important;
+  --bg-surface-inset: #E5E5E5 !important;
+
+  --text-primary: #000000 !important;
+  --text-secondary: #111111 !important;
+  --text-muted: #222222 !important;
+  --text-subtle: #333333 !important;
+
+  --border-subtle: #000000 !important;
+  --border-medium: #000000 !important;
+  --border-strong: #000000 !important;
+
+  --agri-deep: #000000 !important;
+  --agri-forest: #000000 !important;
+  --agri-primary: #000000 !important;
+  --agri-mint: #FFF59D !important;
+  --agri-mint-text: #000000 !important;
+}
+
 body {
   font-family: var(--font-sans);
-  background-color: var(--agri-bg);
-  color: var(--agri-deep);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .font-serif-display {
@@ -30,56 +120,79 @@ body {
 
 .font-mono-numbers {
   font-family: var(--font-mono);
+  font-feature-settings: "tnum";
 }
 
-/* Subtle editorial paper texture & borders */
-.editorial-card {
-  background: #FFFFFF;
-  border: 1px solid rgba(11, 93, 59, 0.08);
-  box-shadow: 0 4px 20px -2px rgba(6, 59, 42, 0.03);
+/* Refined Card Surfaces */
+.theme-card {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.editorial-card-hover {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.editorial-card-hover:hover {
+.theme-card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px -6px rgba(6, 59, 42, 0.08);
-  border-color: rgba(22, 138, 91, 0.25);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-hover);
 }
 
-/* High-contrast outdoor mode */
-.outdoor-contrast-mode {
-  background-color: #FFFFFF !important;
-  color: #000000 !important;
+.theme-card-subtle {
+  background-color: var(--bg-surface-subtle);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
 }
 
+.theme-card-elevated {
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  box-shadow: var(--shadow-hover);
+}
+
+/* High contrast outdoor rules */
+.outdoor-contrast-mode .theme-card,
 .outdoor-contrast-mode .editorial-card,
-.outdoor-contrast-mode .outdoor-target {
+.outdoor-contrast-mode button,
+.outdoor-contrast-mode input {
   border: 2px solid #000000 !important;
-  box-shadow: 4px 4px 0px #000000 !important;
-  background-color: #FFFFFF !important;
+  box-shadow: 3px 3px 0px #000000 !important;
 }
 
-/* Accessible minimum touch targets */
+/* Touch targets */
+.touch-target-48 {
+  min-height: 48px;
+  min-width: 48px;
+}
+
 .touch-target-56 {
   min-height: 56px;
   min-width: 56px;
 }
 
-/* Smooth custom scrollbars */
+/* Custom subtle scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F0F4F2;
+  background: var(--bg-canvas);
 }
 ::-webkit-scrollbar-thumb {
-  background: #A7C5B8;
+  background: var(--border-medium);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #168A5B;
+  background: var(--agri-primary);
 }
 
+/* Smooth pulse for live badges */
+@keyframes soft-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-soft-pulse {
+  animation: soft-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

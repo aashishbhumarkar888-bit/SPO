@@ -20,17 +20,24 @@ import {
   Sparkles,
   PhoneCall,
   Flame,
-  FileCheck
+  FileCheck,
+  User,
+  LogOut,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   AgriToken, 
   ProcurementRecord, 
   MachineryAsset, 
   LanguageCode, 
-  QueueStatus 
+  QueueStatus,
+  SupervisorSession 
 } from '../../types';
 import { playAudioChime, speakAnnouncement, announceTokenCall } from '../../utils/speech';
 import { IntegrationBadge } from '../common/IntegrationBadge';
+import { SupervisorQuickReport } from './SupervisorQuickReport';
+import { SupervisorDocumentWorkflow } from './SupervisorDocumentWorkflow';
+import { SupervisorProfileTab } from './SupervisorProfileTab';
 
 interface SupervisorConsoleProps {
   tokens: AgriToken[];
@@ -44,6 +51,11 @@ interface SupervisorConsoleProps {
   onDispatchAsset: (assetId: string, farmerName: string, village: string) => void;
   onRecallAsset: (assetId: string) => void;
   language: LanguageCode;
+  onExit?: () => void;
+  session?: SupervisorSession | null;
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
+  onLanguageChange?: (lang: LanguageCode) => void;
 }
 
 export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
@@ -57,9 +69,15 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
   fleet,
   onDispatchAsset,
   onRecallAsset,
-  language
+  language,
+  onExit,
+  session,
+  theme,
+  onToggleTheme,
+  onLanguageChange
 }) => {
-  const [activeTab, setActiveTab] = useState<'queue' | 'weighbridge' | 'fleet' | 'reports'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'weighbridge' | 'fleet' | 'reports' | 'profile'>('queue');
+  const [weighbridgeMode, setWeighbridgeMode] = useState<'document' | 'scale'>('document');
   const [counterFilter, setCounterFilter] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -70,6 +88,7 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
   const [newCrop, setNewCrop] = useState<string>('Soyabean (Yellow)');
   const [newFarmerName, setNewFarmerName] = useState<string>('Rameshwar Patil');
   const [newKisanId, setNewKisanId] = useState<string>('MH-WRD-8921');
+  const [weighbridgeSuccessMsg, setWeighbridgeSuccessMsg] = useState<string | null>(null);
 
   // Dispatch modal state
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
@@ -115,7 +134,38 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
     };
 
     onAddProcurement(newRecord);
-    alert(`Weighbridge Entry Saved! Slip ${newRecord.slipNumber} created with Net Weight ${netWeight} Qtl. Total DBT Advice: ₹${grossPayable.toLocaleString('en-IN')}`);
+    setWeighbridgeSuccessMsg(`Weighbridge Entry Saved! Slip #${newRecord.slipNumber} created with Net Weight ${netWeight} Qtl. Total Statutory DBT Advice: ₹${grossPayable.toLocaleString('en-IN')}`);
+    setTimeout(() => setWeighbridgeSuccessMsg(null), 7000);
+  };
+
+  const handleExportCsvManifest = () => {
+    playAudioChime();
+    const headers = ['Slip Number', 'Token ID', 'Kisan ID', 'Farmer Name', 'Crop Name', 'Net Weight (Qtl)', 'Gross Weight (Qtl)', 'Tare Weight (Qtl)', 'Moisture %', 'Grade', 'MSP Rate (INR)', 'Payable Amount (INR)', 'DBT Status', 'UTR Number', 'Timestamp'];
+    const rows = procurementRecords.map(r => [
+      `"${r.slipNumber}"`,
+      `"${r.tokenId}"`,
+      `"${r.kisanId}"`,
+      `"${r.farmerName}"`,
+      `"${r.cropName}"`,
+      r.netWeightQuintals,
+      r.grossWeightQuintals || (r.netWeightQuintals + 5),
+      r.tareWeightQuintals || 5,
+      r.moisturePercentage,
+      `"${r.qualityGrade}"`,
+      r.mspPerQuintal,
+      r.totalGrossPayable,
+      `"${r.dbtStatus}"`,
+      `"${r.utrNumber || 'PENDING'}"`,
+      `"${r.timestamp}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `APMC_Wardha_Daily_Manifest_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const filteredTokens = tokens.filter(t => {
@@ -133,6 +183,44 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fade-in">
+      {/* Official Terminal Header */}
+      <div className="bg-[#063B2A] text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-[#0B5D3B] shadow-md">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#DDF4E9]">
+              Official Operations Terminal • Kendra Console
+            </span>
+          </div>
+          <h2 className="text-xl font-bold font-serif-display text-white">
+            Wardha APMC Central Procurement Hub
+          </h2>
+          <p className="text-xs text-white/70 mt-0.5">
+            Operator: <strong>{session?.officerName || 'D. S. Kulkarni'}</strong> ({session?.supervisorId || 'SUP-WRD-01'}) • Station: {session?.terminalId || 'TERM-04'} • Shift Active
+          </p>
+        </div>
+
+        {onExit && (
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className="px-3.5 py-2 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded-xl border border-white/20 transition-all flex items-center gap-1.5"
+            >
+              <User className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Station Profile</span>
+            </button>
+            <button
+              onClick={onExit}
+              className="px-4 py-2 text-xs font-bold bg-red-600/80 hover:bg-red-600 text-white rounded-xl border border-red-500/50 transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+              title="Lock Terminal and Return to Public Portal"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Lock / Exit</span>
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Supervisor Top Operational Status Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
         <div className="editorial-card rounded-2xl p-4 border border-[#D7E3DC] bg-white">
@@ -239,10 +327,22 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Pacing & Reports</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('profile')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'profile'
+                ? 'bg-[#168A5B] text-white shadow-xs'
+                : 'text-[#063B2A]/70 hover:text-[#063B2A]'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>Profile & Terminal</span>
+          </button>
         </div>
 
         <span className="text-xs text-[#063B2A]/70 font-semibold">
-          Supervisor: <strong>D. S. Kulkarni (Kendra Superintendent)</strong>
+          Supervisor: <strong>{session?.officerName || 'D. S. Kulkarni'} ({session?.centreId || 'Wardha Hub'})</strong>
         </span>
       </div>
 
@@ -409,7 +509,68 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
 
       {/* TAB 2: Digital Weighbridge & Moisture Analysis Terminal */}
       {activeTab === 'weighbridge' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="space-y-4">
+          {/* Sub-mode selector: Verified Document Workflow vs Manual Weighbridge Scale Input */}
+          <div className="flex items-center justify-between gap-3 p-3 bg-white rounded-2xl border border-[#D7E3DC] flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-[#063B2A] uppercase tracking-wider">
+                Inward Processing Channel:
+              </span>
+              <div className="flex items-center gap-1.5 bg-[#F0F5F2] p-1 rounded-xl border border-[#D7E3DC]">
+                <button
+                  onClick={() => setWeighbridgeMode('document')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    weighbridgeMode === 'document'
+                      ? 'bg-[#168A5B] text-white shadow-xs'
+                      : 'text-[#063B2A]/70 hover:text-[#063B2A]'
+                  }`}
+                >
+                  <FileCheck className="w-3.5 h-3.5" />
+                  <span>Verified Document Inward (Upload & Validate)</span>
+                </button>
+                <button
+                  onClick={() => setWeighbridgeMode('scale')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    weighbridgeMode === 'scale'
+                      ? 'bg-[#168A5B] text-white shadow-xs'
+                      : 'text-[#063B2A]/70 hover:text-[#063B2A]'
+                  }`}
+                >
+                  <Scale className="w-3.5 h-3.5" />
+                  <span>Direct Scale Input (IS 9281)</span>
+                </button>
+              </div>
+            </div>
+
+            <IntegrationBadge status="LIVE" spec="IS 9281 + RoR" featureName="Mandi Inward Pipeline" featureId="AUD-02" />
+          </div>
+
+          {weighbridgeMode === 'document' ? (
+            <SupervisorDocumentWorkflow
+              onCommitInwardRecord={(rec) => {
+                onAddProcurement(rec);
+                setWeighbridgeSuccessMsg(`Verified Document Inward: Docket #${rec.slipNumber} committed for ${rec.farmerName} (${rec.netWeightQuintals} Qtl). PFMS DBT advice generated.`);
+              }}
+              language={language}
+            />
+          ) : (
+            <>
+              {weighbridgeSuccessMsg && (
+                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-[#153A2C] border-2 border-emerald-500 text-emerald-950 dark:text-emerald-100 flex items-center justify-between gap-3 animate-fade-in shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                    <span className="text-xs font-bold leading-relaxed">{weighbridgeSuccessMsg}</span>
+                  </div>
+                  <button
+                    onClick={() => setWeighbridgeSuccessMsg(null)}
+                    className="text-emerald-700 dark:text-emerald-300 hover:text-emerald-950 text-xs font-bold underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left: Interactive Inward Terminal Form */}
           <div className="lg:col-span-7 editorial-card rounded-2xl bg-white border border-[#D7E3DC] p-5 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-[#E4EBE6] pb-3 flex-wrap gap-2">
@@ -557,6 +718,9 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
               ))}
             </div>
           </div>
+          </div>
+          </>
+          )}
         </div>
       )}
 
@@ -714,52 +878,25 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
 
       {/* TAB 4: Pacing & Daily Manifest Reports */}
       {activeTab === 'reports' && (
-        <div className="editorial-card rounded-2xl bg-white border border-[#D7E3DC] p-6 space-y-5 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4EBE6] pb-4">
-            <div>
-              <h3 className="font-bold text-base text-[#063B2A]">
-                APMC Wardha Daily Procurement Manifest & Capacity Pacing
-              </h3>
-              <p className="text-xs text-[#063B2A]/70 mt-0.5">
-                Statutory report for Maharashtra State Agriculture Marketing Board (MSAMB)
-              </p>
-            </div>
+        <SupervisorQuickReport
+          tokens={tokens}
+          procurementRecords={procurementRecords}
+          language={language}
+          centreName="Wardha APMC Central Procurement Hub"
+          onExportCsv={handleExportCsvManifest}
+        />
+      )}
 
-            <button
-              onClick={() => alert('Downloading official APMC CSV Manifest...')}
-              className="px-4 py-2 rounded-xl bg-[#063B2A] hover:bg-[#0B5D3B] text-white text-xs font-bold flex items-center gap-1.5 self-start sm:self-center"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Export CSV Manifest</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-            <div className="p-4 rounded-xl bg-[#F6F9F7] border border-[#E4EBE6]">
-              <span className="text-slate-500 block">Total Farmers Serviced Today</span>
-              <span className="text-2xl font-bold font-mono-numbers text-[#063B2A] mt-1 block">
-                {procurementRecords.length + 8}
-              </span>
-              <span className="text-emerald-700 font-semibold text-[11px]">94% On-time Pacing</span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#F6F9F7] border border-[#E4EBE6]">
-              <span className="text-slate-500 block">Total Tonnage Inward</span>
-              <span className="text-2xl font-bold font-mono-numbers text-[#063B2A] mt-1 block">
-                {(procurementRecords.reduce((acc, r) => acc + r.netWeightQuintals, 0) / 10).toFixed(2)} MT
-              </span>
-              <span className="text-slate-600 text-[11px]">Metric Tonnes Grain</span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#F6F9F7] border border-[#E4EBE6]">
-              <span className="text-slate-500 block">Total PFMS Direct Benefit</span>
-              <span className="text-2xl font-bold font-mono-numbers text-[#0B5D3B] mt-1 block">
-                ₹{procurementRecords.reduce((acc, r) => acc + r.totalGrossPayable, 0).toLocaleString('en-IN')}
-              </span>
-              <span className="text-emerald-700 font-semibold text-[11px]">Direct Bank Credits</span>
-            </div>
-          </div>
-        </div>
+      {/* TAB 5: Supervisor Profile & Station Security */}
+      {activeTab === 'profile' && (
+        <SupervisorProfileTab
+          session={session}
+          language={language}
+          onLanguageChange={onLanguageChange}
+          theme={theme}
+          onToggleTheme={onToggleTheme}
+          onLogout={onExit || (() => {})}
+        />
       )}
     </div>
   );

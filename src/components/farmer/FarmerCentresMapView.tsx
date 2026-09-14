@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { ServiceCentre, LanguageCode } from '../../types';
 import { SERVICE_CENTRES, TRANSLATIONS } from '../../data/agriMockData';
+import { speakAnnouncement } from '../../utils/speech';
 
 interface FarmerCentresMapViewProps {
   language: LanguageCode;
@@ -22,6 +23,7 @@ export const FarmerCentresMapView: React.FC<FarmerCentresMapViewProps> = ({
 }) => {
   const [activeCentre, setActiveCentre] = useState<ServiceCentre>(SERVICE_CENTRES[0]);
   const [filterType, setFilterType] = useState<string>('All');
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   const filteredCentres = SERVICE_CENTRES.filter(c => {
@@ -166,31 +168,76 @@ export const FarmerCentresMapView: React.FC<FarmerCentresMapViewProps> = ({
               </div>
             </div>
 
+            {/* Live GPS Active Guidance Banner */}
+            {isNavigating && (
+              <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-[#153A2C] border border-emerald-300 dark:border-[#22A872] text-xs space-y-2 animate-fade-in transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                    <Navigation className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>{language === 'hi' ? 'लाइव जीपीएस मार्गदर्शन सक्रिय' : 'Live GPS Guidance Active'}</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-300 font-bold">
+                    Speed: 28 km/h • ETA: 14 min
+                  </span>
+                </div>
+                <p className="text-emerald-800 dark:text-emerald-100 text-[11px] leading-relaxed">
+                  {language === 'hi' 
+                    ? 'अगला मोड़: 400 मीटर बाद, एपीएमसी कृषि बाईपास कॉरिडोर की ओर बाएं मुड़ें।' 
+                    : 'Next turn: In 400m, keep left towards APMC Agricultural Bypass Corridor Gate #2.'}
+                </p>
+              </div>
+            )}
+
             {/* Directions Steps */}
-            <div className="p-3.5 rounded-xl bg-[#F6F9F7] border border-[#E4EBE6] text-xs space-y-2 text-[#063B2A]">
+            <div className="p-3.5 rounded-xl bg-[#F6F9F7] dark:bg-[#143026] border border-[#E4EBE6] dark:border-[#1D4334] text-xs space-y-2 text-[#063B2A] dark:text-[#F0FAF5] transition-colors">
               <div className="flex items-start gap-2">
                 <span className="w-5 h-5 rounded-full bg-[#168A5B] text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                   1
                 </span>
-                <p>Head North towards Sevagram-Wardha State Highway (2.1 km)</p>
+                <p>{language === 'hi' ? 'सेवाग्राम-वर्धा राज्य राजमार्ग की ओर उत्तर दिशा में जाएं (2.1 किमी)' : 'Head North towards Sevagram-Wardha State Highway (2.1 km)'}</p>
               </div>
               <div className="flex items-start gap-2">
                 <span className="w-5 h-5 rounded-full bg-[#168A5B] text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                   2
                 </span>
-                <p>Turn right at APMC Kisan Gate #2 into Weighbridge Queue Bay</p>
+                <p>{language === 'hi' ? 'एपीएमसी किसान गेट #2 से सीधे तौल कांटा कतार लेन में प्रवेश करें' : 'Turn right at APMC Kisan Gate #2 into Weighbridge Queue Bay'}</p>
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                alert(`Opening GPS Navigation to ${activeCentre.name}...`);
-              }}
-              className="w-full py-3 rounded-xl bg-[#063B2A] hover:bg-[#0B5D3B] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
-            >
-              <Navigation className="w-4 h-4 text-emerald-300" />
-              <span>{language === 'hi' ? 'नेविगेशन शुरू करें' : 'Start Turn-by-Turn GPS'}</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => {
+                  setIsNavigating(prev => !prev);
+                  const msg = language === 'hi'
+                    ? `${activeCentre.nameHi || activeCentre.name} हेतु जीपीएस मार्गदर्शन शुरू। दूरी 4.2 किलोमीटर। सीधे जाएं।`
+                    : `GPS guidance started for ${activeCentre.name}. Distance 4.2 kilometers. Proceed towards Gate 2.`;
+                  speakAnnouncement(msg, language === 'hi' ? 'hi' : 'en');
+                }}
+                className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm ${
+                  isNavigating
+                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                    : 'bg-[#063B2A] hover:bg-[#0B5D3B] text-white'
+                }`}
+              >
+                <Navigation className="w-4 h-4 text-emerald-300" />
+                <span>
+                  {isNavigating
+                    ? (language === 'hi' ? 'मार्गदर्शन रोकें' : 'Stop Navigation')
+                    : (language === 'hi' ? 'नेविगेशन शुरू करें' : 'Start Turn-by-Turn GPS')}
+                </span>
+              </button>
+
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeCentre.name + ', Wardha, Maharashtra')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-3 px-4 rounded-xl border border-[#C7DCD1] dark:border-[#2B5E4A] bg-white dark:bg-[#143026] text-[#063B2A] dark:text-[#F0FAF5] hover:bg-[#F4F7F5] dark:hover:bg-[#1C3E32] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                title="Open in Google Maps"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-[#168A5B]" />
+                <span>Maps</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

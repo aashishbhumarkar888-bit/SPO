@@ -13,19 +13,34 @@ import {
   Plus, 
   Radio, 
   Sparkles,
-  Volume2
+  Volume2,
+  User,
+  LogOut
 } from 'lucide-react';
-import { BusinessRuleConfig, LanguageCode } from '../../types';
+import { BusinessRuleConfig, LanguageCode, SuperAdminSession } from '../../types';
 import { INITIAL_BUSINESS_RULES } from '../../data/agriMockData';
 import { speakAnnouncement, playAudioChime } from '../../utils/speech';
 import { IntegrationBadge } from '../common/IntegrationBadge';
+import { SuperAdminProfileTab } from './SuperAdminProfileTab';
 
 interface SuperAdminConsoleProps {
   language: LanguageCode;
+  onExit?: () => void;
+  session?: SuperAdminSession | null;
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
+  onLanguageChange?: (lang: LanguageCode) => void;
 }
 
-export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({ language }) => {
-  const [activeTab, setActiveTab] = useState<'network' | 'rules' | 'users' | 'languages' | 'broadcast'>('rules');
+export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({ 
+  language, 
+  onExit,
+  session,
+  theme,
+  onToggleTheme,
+  onLanguageChange 
+}) => {
+  const [activeTab, setActiveTab] = useState<'network' | 'rules' | 'users' | 'languages' | 'broadcast' | 'profile'>('rules');
   const [rules, setRules] = useState<BusinessRuleConfig>(INITIAL_BUSINESS_RULES);
   const [broadcastText, setBroadcastText] = useState(INITIAL_BUSINESS_RULES.alertEmergencyBroadcast);
   const [broadcastTextHi, setBroadcastTextHi] = useState(INITIAL_BUSINESS_RULES.alertEmergencyBroadcastHi);
@@ -39,9 +54,32 @@ export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({ language }
     { id: 'USR-4', name: 'Pravin Wankhede', role: 'Drone Fleet Lead', centre: 'Sevagram Hub', status: 'Active' }
   ]);
 
+  const [rulesSavedMsg, setRulesSavedMsg] = useState<string | null>(null);
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newStaffRole, setNewStaffRole] = useState('Kendra Supervisor');
+  const [newStaffCentre, setNewStaffCentre] = useState('Wardha Central Kendra');
+
   const handleSaveRules = () => {
     playAudioChime();
-    alert('Business Rules & Policy Engine Updated successfully across all 12 Kendras!');
+    setRulesSavedMsg('Business Rules & Dynamic MSP Policy Engine updated successfully across all 12 Kendras! Synchronized with MSAMB state gateway.');
+    setTimeout(() => setRulesSavedMsg(null), 6000);
+  };
+
+  const handleAddStaffSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStaffName.trim()) return;
+    const newOfficer = {
+      id: `USR-${adminUsers.length + 1}`,
+      name: newStaffName.trim(),
+      role: newStaffRole,
+      centre: newStaffCentre,
+      status: 'Active'
+    };
+    setAdminUsers(prev => [...prev, newOfficer]);
+    setNewStaffName('');
+    setIsAddStaffOpen(false);
+    playAudioChime();
   };
 
   const handleSendBroadcast = () => {
@@ -54,28 +92,50 @@ export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({ language }
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fade-in">
       {/* Super Admin Top Banner */}
-      <div className="bg-[#063B2A] text-white rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 border border-[#0B5D3B]">
+      <div className="bg-[#063B2A] text-white rounded-2xl p-5 sm:p-6 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 border border-[#0B5D3B]">
         <div>
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-[#DDF4E9] text-[10px] font-bold uppercase tracking-wider">
               Strategic State Governance Portal
             </span>
             <span className="text-xs text-emerald-300 font-mono">DISTRICT: WARDHA (ZONE-IV)</span>
-            <IntegrationBadge status="LIVE" spec="State Rules" featureName="MSP Policy Engine" featureId="AUD-04" />
           </div>
           <h2 className="text-2xl font-bold font-serif-display tracking-tight text-white">
-            AgriSeva Strategic & Policy Administration
+            SPO — Strategic Policy & Governance Console
           </h2>
           <p className="text-xs text-white/70 mt-1">
-            Configure dynamic MSP procurement rules, moisture standards, SMAM mechanization subsidies, and emergency broadcasts.
+            Configure dynamic MSP procurement rules, moisture standards, allocation policy, and state-level directives.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start md:self-center">
+        <div className="flex items-center gap-3 self-start md:self-center flex-wrap">
           <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-center">
             <span className="text-[10px] text-white/70 block">Connected Kendras</span>
             <span className="text-xl font-mono-numbers font-bold text-emerald-300">12 / 12 Online</span>
           </div>
+
+          <button
+            onClick={() => setActiveTab('profile')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 ${
+              activeTab === 'profile'
+                ? 'bg-emerald-500 text-[#063B2A] border-emerald-400 font-extrabold shadow-sm'
+                : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
+            }`}
+          >
+            <User className="w-4 h-4" />
+            <span>Profile & Security</span>
+          </button>
+
+          {onExit && (
+            <button
+              onClick={onExit}
+              className="px-4 py-2 text-xs font-bold bg-red-600/90 hover:bg-red-600 text-white rounded-xl border border-red-500 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+              title="Securely exit governance console"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Exit Console</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -128,11 +188,38 @@ export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({ language }
           <Megaphone className="w-3.5 h-3.5" />
           <span>Emergency Broadcaster</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('profile')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 flex-shrink-0 ${
+            activeTab === 'profile'
+              ? 'bg-[#063B2A] text-white shadow-xs'
+              : 'text-[#063B2A]/70 hover:text-[#063B2A] bg-white border border-[#D7E3DC]'
+          }`}
+        >
+          <User className="w-3.5 h-3.5" />
+          <span>Profile & Security</span>
+        </button>
       </div>
 
       {/* TAB 1: Business Rules & MSP Engine */}
       {activeTab === 'rules' && (
         <div className="editorial-card rounded-2xl bg-white border border-[#D7E3DC] p-6 space-y-6 shadow-sm">
+          {rulesSavedMsg && (
+            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-400 text-emerald-950 flex items-center justify-between gap-3 text-xs font-bold animate-fade-in shadow-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>{rulesSavedMsg}</span>
+              </div>
+              <button
+                onClick={() => setRulesSavedMsg(null)}
+                className="text-emerald-700 hover:text-emerald-950 underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between border-b border-[#E4EBE6] pb-4">
             <div>
               <h3 className="font-bold text-base text-[#063B2A]">
@@ -300,13 +387,89 @@ export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({ language }
               Role-Based Access Control & Staff Roster
             </h3>
             <button
-              onClick={() => alert('Add new field operator / supervisor...')}
-              className="px-3 py-1.5 rounded-lg bg-[#168A5B] text-white text-xs font-bold flex items-center gap-1"
+              onClick={() => setIsAddStaffOpen(true)}
+              className="px-3 py-1.5 rounded-lg bg-[#168A5B] text-white text-xs font-bold flex items-center gap-1 hover:bg-[#0B5D3B] transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Staff</span>
             </button>
           </div>
+
+          {/* Add Staff Modal */}
+          {isAddStaffOpen && (
+            <form onSubmit={handleAddStaffSubmit} className="p-4 rounded-xl bg-[#F6F9F7] border border-[#C7DCD1] space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-xs text-[#063B2A] uppercase tracking-wider">
+                  Add New Mandi / Kendra Staff Officer
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setIsAddStaffOpen(false)}
+                  className="text-xs text-slate-500 hover:text-slate-800"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div>
+                  <label className="block text-[#063B2A]/70 font-semibold mb-1">Officer Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Rameshwar Shinde"
+                    value={newStaffName}
+                    onChange={(e) => setNewStaffName(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-[#C7DCD1] bg-white text-[#063B2A] font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[#063B2A]/70 font-semibold mb-1">Designation / Role</label>
+                  <select
+                    value={newStaffRole}
+                    onChange={(e) => setNewStaffRole(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-[#C7DCD1] bg-white text-[#063B2A] font-medium"
+                  >
+                    <option value="Kendra Supervisor">Kendra Supervisor</option>
+                    <option value="Weighbridge Operator">Weighbridge Operator</option>
+                    <option value="Quality Assayer">Quality Assayer</option>
+                    <option value="Fleet Dispatcher">Fleet Dispatcher</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[#063B2A]/70 font-semibold mb-1">Assigned Kendra</label>
+                  <select
+                    value={newStaffCentre}
+                    onChange={(e) => setNewStaffCentre(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-[#C7DCD1] bg-white text-[#063B2A] font-medium"
+                  >
+                    <option value="Wardha Central Kendra">Wardha Central Kendra</option>
+                    <option value="APMC Mandi Yard #2">APMC Mandi Yard #2</option>
+                    <option value="Sevagram Hub">Sevagram Hub</option>
+                    <option value="Deoli Sub-Yard">Deoli Sub-Yard</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStaffOpen(false)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-lg bg-[#168A5B] hover:bg-[#0B5D3B] text-white text-xs font-bold shadow-xs"
+                >
+                  Confirm & Add Officer
+                </button>
+              </div>
+            </form>
+          )}
 
           <div className="overflow-x-auto border border-[#D7E3DC] rounded-xl">
             <table className="w-full text-left text-xs text-[#063B2A]">
@@ -406,6 +569,18 @@ export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({ language }
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB 5: Administrator Profile, Session Status & Security */}
+      {activeTab === 'profile' && (
+        <SuperAdminProfileTab
+          session={session}
+          language={language}
+          onLanguageChange={onLanguageChange}
+          theme={theme}
+          onToggleTheme={onToggleTheme}
+          onLogout={onExit || (() => {})}
+        />
       )}
     </div>
   );
