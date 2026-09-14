@@ -1,0 +1,6 @@
+{
+  "name": "AgriSeva - Farmer-First Digital Agri Operations Platform",
+  "description": "Premium rural digital infrastructure empowering Indian farmers with multilingual voice assistance, smart slot booking, live mandi queue tracking, fleet dispatch, and direct DBT payments.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

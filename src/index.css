@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+:root {
+  --agri-primary: #168A5B;
+  --agri-forest: #0B5D3B;
+  --agri-deep: #063B2A;
+  --agri-bg: #F6F9F7;
+  --agri-surface: #FFFFFF;
+  --agri-mint: #DDF4E9;
+  --agri-blue: #2878C8;
+  --agri-purple: #7866D8;
+  --agri-amber: #D99121;
+  --agri-red: #D95353;
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--agri-bg);
+  color: var(--agri-deep);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.font-serif-display {
+  font-family: var(--font-serif);
+  letter-spacing: -0.02em;
+}
+
+.font-mono-numbers {
+  font-family: var(--font-mono);
+}
+
+/* Subtle editorial paper texture & borders */
+.editorial-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(11, 93, 59, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(6, 59, 42, 0.03);
+}
+
+.editorial-card-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.editorial-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -6px rgba(6, 59, 42, 0.08);
+  border-color: rgba(22, 138, 91, 0.25);
+}
+
+/* High-contrast outdoor mode */
+.outdoor-contrast-mode {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+.outdoor-contrast-mode .editorial-card,
+.outdoor-contrast-mode .outdoor-target {
+  border: 2px solid #000000 !important;
+  box-shadow: 4px 4px 0px #000000 !important;
+  background-color: #FFFFFF !important;
+}
+
+/* Accessible minimum touch targets */
+.touch-target-56 {
+  min-height: 56px;
+  min-width: 56px;
+}
+
+/* Smooth custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F0F4F2;
+}
+::-webkit-scrollbar-thumb {
+  background: #A7C5B8;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #168A5B;
+}
+
