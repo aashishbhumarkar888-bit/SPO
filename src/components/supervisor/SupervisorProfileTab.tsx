@@ -300,9 +300,9 @@ export const SupervisorProfileTab: React.FC<SupervisorProfileTabProps> = ({
       </div>
 
       {/* Terminal Settings: Theme & Language */}
-      <div className="editorial-card rounded-2xl bg-white border border-[#D7E3DC] p-5 space-y-4 shadow-sm">
-        <div className="border-b border-[#E4EBE6] pb-3">
-          <h4 className="font-bold text-xs uppercase tracking-wider text-[#063B2A] flex items-center gap-1.5">
+      <div className="editorial-card rounded-2xl bg-white dark:bg-[#0E241C] border border-[#D7E3DC] dark:border-[#1D4334] p-5 space-y-4 shadow-sm">
+        <div className="border-b border-[#E4EBE6] dark:border-[#1D4334] pb-3">
+          <h4 className="font-bold text-xs uppercase tracking-wider text-[#063B2A] dark:text-[#6EE7B7] flex items-center gap-1.5">
             <Globe className="w-4 h-4 text-[#168A5B]" />
             <span>Terminal Language & Interface Preferences</span>
           </h4>
@@ -310,27 +310,27 @@ export const SupervisorProfileTab: React.FC<SupervisorProfileTabProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div>
-            <label className="font-semibold text-slate-600 block mb-1.5">Operational Interface Language</label>
+            <label className="font-semibold text-slate-600 dark:text-[#A3C7B8] block mb-1.5">Operational Interface Language</label>
             <div className="flex items-center gap-2">
               <select
                 value={language}
                 onChange={e => onLanguageChange?.(e.target.value as LanguageCode)}
-                className="w-full p-2.5 rounded-xl border border-[#D7E3DC] font-semibold text-[#063B2A] bg-[#F6F9F7]"
+                className="w-full p-2.5 rounded-xl border border-[#D7E3DC] dark:border-[#1D4334] font-semibold text-[#063B2A] dark:text-[#F0FAF5] bg-[#F6F9F7] dark:bg-[#143026] cursor-pointer"
               >
-                <option value="hi">हिन्दी (Hindi)</option>
-                <option value="en">English</option>
-                <option value="mr">मराठी (Marathi)</option>
-                <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                <option value="hi" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">हिन्दी (Hindi)</option>
+                <option value="en" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">English</option>
+                <option value="mr" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">मराठी (Marathi)</option>
+                <option value="pa" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">ਪੰਜਾਬੀ (Punjabi)</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="font-semibold text-slate-600 block mb-1.5">Visual Theme</label>
+            <label className="font-semibold text-slate-600 dark:text-[#A3C7B8] block mb-1.5">Visual Theme</label>
             <button
               type="button"
               onClick={onToggleTheme}
-              className="w-full p-2.5 rounded-xl border border-[#D7E3DC] bg-[#F6F9F7] font-semibold text-[#063B2A] flex items-center justify-between hover:bg-slate-100 transition-colors"
+              className="w-full p-2.5 rounded-xl border border-[#D7E3DC] dark:border-[#1D4334] bg-[#F6F9F7] dark:bg-[#143026] font-semibold text-[#063B2A] dark:text-[#F0FAF5] flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#1A3C2F] transition-colors"
             >
               <span>Current Theme: <strong>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</strong></span>
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-emerald-800" />}

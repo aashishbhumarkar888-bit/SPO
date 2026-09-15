@@ -1,4 +1,4 @@
-export type RoleMode = 'farmer' | 'supervisor' | 'superadmin';
+export type RoleMode = 'landing' | 'farmer' | 'supervisor' | 'superadmin';
 export type AppRole = RoleMode;
 
 export type IntegrationStatusBadge = 'LIVE' | 'SYNCED' | 'INTEGRATION-READY' | 'PROPOSED';

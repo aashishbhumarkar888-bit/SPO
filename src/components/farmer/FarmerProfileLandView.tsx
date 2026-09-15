@@ -261,24 +261,48 @@ export const FarmerProfileLandView: React.FC<FarmerProfileLandViewProps> = ({
             </span>
             <div className="grid grid-cols-2 gap-1.5">
               <button
+                type="button"
                 onClick={() => onLanguageChange && onLanguageChange('hi')}
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   language === 'hi'
-                    ? 'bg-[#168A5B] text-white shadow-sm'
-                    : 'bg-white dark:bg-[#0E241C] text-[#083324] dark:text-[#F0FAF5] border border-[#DCE7E1] dark:border-[#1D4334] hover:bg-slate-100'
+                    ? 'bg-[#168A5B] text-white shadow-sm ring-1 ring-[#168A5B]'
+                    : 'bg-white dark:bg-[#0E241C] text-[#083324] dark:text-[#F0FAF5] border border-[#DCE7E1] dark:border-[#1D4334] hover:bg-slate-100 dark:hover:bg-[#1A3C2F]'
                 }`}
               >
-                हिंदी (HI)
+                हिन्दी (HI)
               </button>
               <button
+                type="button"
                 onClick={() => onLanguageChange && onLanguageChange('en')}
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   language === 'en'
-                    ? 'bg-[#168A5B] text-white shadow-sm'
-                    : 'bg-white dark:bg-[#0E241C] text-[#083324] dark:text-[#F0FAF5] border border-[#DCE7E1] dark:border-[#1D4334] hover:bg-slate-100'
+                    ? 'bg-[#168A5B] text-white shadow-sm ring-1 ring-[#168A5B]'
+                    : 'bg-white dark:bg-[#0E241C] text-[#083324] dark:text-[#F0FAF5] border border-[#DCE7E1] dark:border-[#1D4334] hover:bg-slate-100 dark:hover:bg-[#1A3C2F]'
                 }`}
               >
                 English (EN)
+              </button>
+              <button
+                type="button"
+                onClick={() => onLanguageChange && onLanguageChange('mr')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  language === 'mr'
+                    ? 'bg-[#168A5B] text-white shadow-sm ring-1 ring-[#168A5B]'
+                    : 'bg-white dark:bg-[#0E241C] text-[#083324] dark:text-[#F0FAF5] border border-[#DCE7E1] dark:border-[#1D4334] hover:bg-slate-100 dark:hover:bg-[#1A3C2F]'
+                }`}
+              >
+                मराठी (MR)
+              </button>
+              <button
+                type="button"
+                onClick={() => onLanguageChange && onLanguageChange('pa')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  language === 'pa'
+                    ? 'bg-[#168A5B] text-white shadow-sm ring-1 ring-[#168A5B]'
+                    : 'bg-white dark:bg-[#0E241C] text-[#083324] dark:text-[#F0FAF5] border border-[#DCE7E1] dark:border-[#1D4334] hover:bg-slate-100 dark:hover:bg-[#1A3C2F]'
+                }`}
+              >
+                ਪੰਜਾਬੀ (PA)
               </button>
             </div>
           </div>

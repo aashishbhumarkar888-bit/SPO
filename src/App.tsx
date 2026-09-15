@@ -20,6 +20,7 @@ import { SuperAdminLoginModal } from './components/superadmin/SuperAdminLoginMod
 import { FarmerLoginModal } from './components/farmer/FarmerLoginModal';
 import { SihDemoConsoleModal } from './components/demo/SihDemoConsoleModal';
 import { SihEvaluationInspector } from './components/common/SihEvaluationInspector';
+import { PublicLandingGate } from './components/common/PublicLandingGate';
 import { auditLogger } from './domain/auditLog';
 import { 
   CURRENT_FARMER, 
@@ -35,7 +36,27 @@ import { eventBus } from './services/eventBus';
 import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles } from 'lucide-react';
 
 export default function App() {
-  const [currentRole, setCurrentRole] = useState<AppRole>('farmer');
+  const [currentRole, setCurrentRole] = useState<AppRole>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const roleParam = params.get('role');
+      if (roleParam === 'supervisor') {
+        const sup = localStorage.getItem('spo_supervisor_session');
+        if (sup) return 'supervisor';
+      }
+      if (roleParam === 'superadmin') {
+        const sa = localStorage.getItem('spo_superadmin_session');
+        if (sa) return 'superadmin';
+      }
+      const savedFarmer = localStorage.getItem('agriseva_farmer');
+      if (savedFarmer) {
+        return 'farmer';
+      }
+    } catch {
+      // restricted environments
+    }
+    return 'landing';
+  });
   const [language, setLanguage] = useState<LanguageCode>(() => {
     try {
       const saved = localStorage.getItem('agriseva_language');
@@ -57,8 +78,15 @@ export default function App() {
   }, [language]);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('agriseva_theme');
-    return (saved === 'dark' || saved === 'light') ? saved : 'light';
+    try {
+      const saved = localStorage.getItem('agriseva_theme');
+      if (saved === null || saved === undefined) {
+        return 'light';
+      }
+      return saved === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
   });
   const [outdoorMode, setOutdoorMode] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
@@ -71,7 +99,11 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('agriseva_theme', theme);
+    try {
+      localStorage.setItem('agriseva_theme', theme);
+    } catch {
+      // restricted environments
+    }
   }, [theme]);
 
   // Authenticated operational sessions (Supervisor & Super Admin)
@@ -121,6 +153,7 @@ export default function App() {
   const handleFarmerLoginSuccess = (newFarmer: FarmerProfile) => {
     setFarmer(newFarmer);
     setIsFarmerLoginModalOpen(false);
+    setCurrentRole('farmer');
     localStorage.setItem('agriseva_farmer', JSON.stringify(newFarmer));
     playAudioChime();
     auditLogger.log({
@@ -169,7 +202,7 @@ export default function App() {
       });
     }
     setSupervisorSession(null);
-    setCurrentRole('farmer');
+    setCurrentRole('landing');
     playAudioChime();
   };
 
@@ -193,7 +226,7 @@ export default function App() {
       });
     }
     setSuperAdminSession(null);
-    setCurrentRole('farmer');
+    setCurrentRole('landing');
     playAudioChime();
   };
 
@@ -204,8 +237,7 @@ export default function App() {
     localStorage.removeItem('agriseva_farmer');
     setSupervisorSession(null);
     setSuperAdminSession(null);
-    setCurrentRole('farmer');
-    setIsFarmerLoginModalOpen(true);
+    setCurrentRole('landing');
     playAudioChime();
     auditLogger.log({
       action: 'FARMER_SESSION_PURGED',
@@ -523,10 +555,27 @@ export default function App() {
         }}
         onOpenFarmerLogin={() => setIsFarmerLoginModalOpen(true)}
         farmerName={farmer.fullName}
+        currentRole={currentRole}
+        onGoToLanding={() => setCurrentRole('landing')}
+        onLogoutCurrentRole={() => {
+          if (currentRole === 'supervisor') handleSupervisorLogout();
+          else if (currentRole === 'superadmin') handleSuperAdminLogout();
+          else if (currentRole === 'farmer') handleFarmerClearSessionAndLogout();
+        }}
       />
 
       {/* Main Viewport Container: Switches based on authenticated role */}
       <div className="flex-1 w-full">
+        {currentRole === 'landing' && (
+          <PublicLandingGate
+            language={language}
+            onOpenFarmerLogin={() => setIsFarmerLoginModalOpen(true)}
+            onOpenSupervisorLogin={() => setIsSupervisorModalOpen(true)}
+            onOpenSuperAdminLogin={() => setIsSuperAdminModalOpen(true)}
+            onOpenDemoDrawer={() => setIsSihDemoOpen(true)}
+          />
+        )}
+
         {currentRole === 'farmer' && (
           <FarmerApp
             farmer={farmer}
@@ -582,8 +631,8 @@ export default function App() {
         )}
       </div>
 
-      {/* Official Government Footer (Rendered in public farmer mode across all screen sizes) */}
-      {currentRole === 'farmer' && (
+      {/* Official Government Footer (Rendered in public mode across all screen sizes) */}
+      {(currentRole === 'farmer' || currentRole === 'landing') && (
         <footer className="bg-[#063B2A] dark:bg-[#081B13] text-white border-t border-[#0B5D3B] dark:border-[#153A2C] py-6 px-4 sm:px-6 mt-auto transition-colors">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/70">
             <div className="text-center sm:text-left">

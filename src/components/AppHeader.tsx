@@ -10,9 +10,11 @@ import {
   Building2,
   ShieldCheck,
   Eye,
-  User
+  User,
+  LogOut,
+  Home
 } from 'lucide-react';
-import { LanguageCode } from '../types';
+import { LanguageCode, AppRole } from '../types';
 import { getTranslations } from '../i18n';
 
 interface AppHeaderProps {
@@ -26,6 +28,9 @@ interface AppHeaderProps {
   onToggleOffline: () => void;
   onOpenFarmerLogin?: () => void;
   farmerName?: string;
+  currentRole?: AppRole;
+  onGoToLanding?: () => void;
+  onLogoutCurrentRole?: () => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -38,7 +43,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isOffline,
   onToggleOffline,
   onOpenFarmerLogin,
-  farmerName
+  farmerName,
+  currentRole = 'farmer',
+  onGoToLanding,
+  onLogoutCurrentRole
 }) => {
   const t = getTranslations(language);
 
@@ -54,7 +62,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             </span>
             <span className="hidden sm:inline text-white/30">|</span>
             <span className="hidden md:inline text-white/80">
-              {language === 'hi' ? 'वर्धा मॉडल उपार्जन केंद्र (विदर्भ संभाग)' : 'Wardha Model Mandi (Vidarbha Agro-Zone)'}
+              {t.mandiLocation}
             </span>
           </div>
 
@@ -89,9 +97,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       {/* Main Brand, Identity & Universal Citizen Controls */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-4 w-full">
-        {/* Brand identity */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#063B2A] dark:bg-[#143026] flex items-center justify-center text-white shadow-sm border border-[#168A5B]/40 flex-shrink-0">
+        {/* Brand identity - Clickable to return to Portal Gateway if onGoToLanding provided */}
+        <div 
+          onClick={onGoToLanding}
+          className={`flex items-center gap-3 ${onGoToLanding ? 'cursor-pointer group' : ''}`}
+          role={onGoToLanding ? 'button' : undefined}
+          title={onGoToLanding ? t.returnToPortalGateway : undefined}
+        >
+          <div className="w-10 h-10 rounded-xl bg-[#063B2A] dark:bg-[#143026] flex items-center justify-center text-white shadow-sm border border-[#168A5B]/40 flex-shrink-0 group-hover:scale-105 transition-transform">
             <Sprout className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" />
           </div>
           <div>
@@ -100,7 +113,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 {t.brandName}
               </h1>
               <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#DDF4E9] dark:bg-[#153A2C] text-[#063B2A] dark:text-[#6EE7B7] border border-[#168A5B]/30 hidden sm:inline-block">
-                {language === 'hi' ? 'सरकारी पोर्टल' : 'Govt Portal'}
+                {currentRole === 'landing' ? t.portalGateway : currentRole === 'supervisor' ? t.roleSupervisorTitle : currentRole === 'superadmin' ? t.roleAdminTitle : t.roleFarmerTitle}
               </span>
             </div>
             <p className="text-[11px] text-[#2C5343] dark:text-[#85AFA0] hidden md:block">
@@ -111,6 +124,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
         {/* Global Controls: Theme Toggle, Sunlight/Outdoor Mode, Language Selector */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Back to Gateway Portal button if inside authenticated role */}
+          {currentRole !== 'landing' && onGoToLanding && (
+            <button
+              onClick={onGoToLanding}
+              title={t.gatewayHome}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-[#C7DCD1] dark:border-[#2B5E4A] bg-[#F4F7F5] dark:bg-[#143026] text-[#063B2A] dark:text-[#ECF8F2] hover:bg-white dark:hover:bg-[#1A3C2F] transition-all"
+            >
+              <Home className="w-3.5 h-3.5 text-[#168A5B]" />
+              <span className="hidden lg:inline">{t.portalGateway}</span>
+            </button>
+          )}
+
           {/* Outdoor Sunlight Mode (High-contrast for bright outdoors) */}
           <button
             onClick={onToggleOutdoorMode}
@@ -128,19 +153,19 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {/* Theme Toggle (Light / Dark Mode) */}
           <button
             onClick={onToggleTheme}
-            title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            title={theme === 'dark' ? t.switchLightMode : t.switchDarkMode}
             aria-label="Toggle visual theme"
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-[#C7DCD1] dark:border-[#2B5E4A] bg-[#F4F7F5] dark:bg-[#143026] text-[#063B2A] dark:text-[#ECF8F2] hover:bg-white dark:hover:bg-[#1A3C2F] transition-all"
           >
             {theme === 'dark' ? (
               <>
                 <Sun className="w-3.5 h-3.5 text-amber-300" />
-                <span className="hidden md:inline">{language === 'hi' ? 'लाइट मोड' : 'Light'}</span>
+                <span className="hidden md:inline">{t.lightMode}</span>
               </>
             ) : (
               <>
-                <Moon className="w-3.5 h-3.5 text-emerald-800" />
-                <span className="hidden md:inline">{language === 'hi' ? 'डार्क मोड' : 'Dark'}</span>
+                <Moon className="w-3.5 h-3.5 text-emerald-800 dark:text-emerald-400" />
+                <span className="hidden md:inline">{t.darkMode}</span>
               </>
             )}
           </button>
@@ -162,16 +187,28 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </div>
 
           {/* Citizen Farmer Login / Account Action */}
-          {onOpenFarmerLogin && (
+          {currentRole === 'farmer' && onOpenFarmerLogin && (
             <button
               onClick={onOpenFarmerLogin}
-              title={farmerName ? `Signed in as ${farmerName}` : "Kisan Sign In"}
+              title={farmerName ? `Signed in as ${farmerName}` : t.kisanLogin}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#E7F7EF] dark:bg-[#143026] text-[#0B5D3B] dark:text-[#6EE7B7] border border-[#98BFA9] dark:border-[#2B5E4A] hover:bg-[#D4EFE0] dark:hover:bg-[#1A3C2F] transition-all shadow-2xs"
             >
               <User className="w-3.5 h-3.5 text-[#168A5B] flex-shrink-0" />
               <span className="hidden sm:inline font-bold">
-                {farmerName ? farmerName.split(' ')[0] : (language === 'hi' ? 'किसान लॉगिन' : 'Kisan Login')}
+                {farmerName ? farmerName.split(' ')[0] : t.kisanLogin}
               </span>
+            </button>
+          )}
+
+          {/* Exit / Logout for Authenticated Operator or Super Admin */}
+          {(currentRole === 'supervisor' || currentRole === 'superadmin') && onLogoutCurrentRole && (
+            <button
+              onClick={onLogoutCurrentRole}
+              title="Sign Out Session"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 hover:bg-red-100 transition-all"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline font-bold">{t.signOut}</span>
             </button>
           )}
         </div>

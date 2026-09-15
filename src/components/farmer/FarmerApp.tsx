@@ -110,14 +110,14 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F8F6] dark:bg-[#071711] flex flex-col text-[#083324] dark:text-[#F0FAF5] selection:bg-[#E7F7EF] selection:text-[#083324] transition-colors duration-200">
+    <div className="min-h-screen bg-[#F4F7F5] dark:bg-[#071711] flex flex-col text-[#083324] dark:text-[#F0FAF5] selection:bg-[#E7F7EF] selection:text-[#083324] transition-colors duration-200">
       {/* Layout Container: Desktop Sidebar + Main Content Flow */}
       <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col lg:flex-row pb-28 lg:pb-12">
         {/* Desktop Side Navigation Bar (All 8 destinations with Icon + Text) */}
         <aside className="hidden lg:block w-64 flex-shrink-0 p-6 pr-2">
           <div className="sticky top-28 bg-white dark:bg-[#0E241C] rounded-2xl border border-[#DCE7E1] dark:border-[#1D4334] p-3 shadow-sm space-y-1.5 transition-colors">
             {/* Farmer identity in sidebar */}
-            <div className="p-3 mb-2 rounded-xl bg-[#F5F8F6] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#2B5E4A] transition-colors">
+            <div className="p-3 mb-2 rounded-xl bg-[#F4F7F5] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#2B5E4A] transition-colors">
               <span className="text-[11px] font-bold text-[#4A6E5E] dark:text-[#85AFA0] uppercase tracking-wider block">
                 {t.kisanId}
               </span>
@@ -142,7 +142,7 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
                       ? 'bg-[#E7F7EF] dark:bg-[#153A2C] text-[#083324] dark:text-[#6EE7B7] border-l-4 border-[#168A5B] dark:border-[#22A872] font-bold shadow-xs'
-                      : 'text-[#4A6E5E] dark:text-[#85AFA0] hover:text-[#083324] dark:hover:text-white hover:bg-[#F5F8F6] dark:hover:bg-[#143026]'
+                      : 'text-[#4A6E5E] dark:text-[#85AFA0] hover:text-[#083324] dark:hover:text-white hover:bg-[#F4F7F5] dark:hover:bg-[#143026]'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -328,7 +328,7 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
                 className={`flex-shrink-0 min-w-[76px] sm:min-w-[88px] min-h-[52px] py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all relative ${
                   isActive
                     ? 'text-[#083324] dark:text-[#6EE7B7] font-bold bg-[#E7F7EF] dark:bg-[#153A2C] border-b-2 border-[#168A5B] dark:border-[#22A872] shadow-xs'
-                    : 'text-[#4A6E5E] dark:text-[#85AFA0] hover:text-[#083324] dark:hover:text-white hover:bg-[#F5F8F6]'
+                    : 'text-[#4A6E5E] dark:text-[#85AFA0] hover:text-[#083324] dark:hover:text-white hover:bg-[#F4F7F5] dark:hover:bg-[#143026]'
                 }`}
               >
                 {item.count && item.count > 0 ? (
