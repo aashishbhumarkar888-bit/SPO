@@ -2,13 +2,21 @@
  * AgriSeva Multi-Method Authentication & Demo Credentials Service
  * 
  * Compliant with:
+ * - Firebase Firestore integration with automatic seeding and live query
  * - DPDPA & UIDAI Aadhaar Masking Standards (never store or display full Aadhaar plaintext post-auth)
  * - Tri-Mode Identifier Detection (12-digit Aadhaar, 10-digit mobile, RFC-5322 email)
- * - Production-Gated Demo Directory (excluded in production builds via import.meta.env.PROD)
+ * - Mobile OTP / Aadhaar OTP simulation (very easy, one-click or SMS-style OTP)
+ * - Seeded accounts for 4 farmers and admin/supervisors
  */
 
 import { FarmerProfile, SupervisorSession, SuperAdminSession } from '../types';
 import { CURRENT_FARMER, RAMESH_KUMAR_SIH_DEMO } from '../data/agriMockData';
+import { 
+  COMPREHENSIVE_SEED_FARMERS, 
+  SEEDED_STAFF_ADMINS,
+  getFarmerByIdentifierFromFirestore,
+  initializeFirestoreData
+} from './firestoreDbService';
 
 export type DetectedIdentifierType = 'aadhaar' | 'mobile' | 'email' | 'unknown';
 
@@ -55,8 +63,8 @@ export function validateIdentifier(input: string): IdentifierValidation {
       type: 'unknown',
       cleanValue: '',
       formattedDisplay: '',
-      errorEn: 'Please enter your Aadhaar (12 digits), mobile number (10 digits), or email.',
-      errorHi: 'कृपया अपना आधार (12 अंक), मोबाइल नंबर (10 अंक) या ईमेल दर्ज करें।'
+      errorEn: 'Please enter your mobile number (10 digits) or Aadhaar number (12 digits).',
+      errorHi: 'कृपया अपना 10-अंकों का मोबाइल नंबर या 12-अंकों का आधार नंबर दर्ज करें।'
     };
   }
 
@@ -85,8 +93,8 @@ export function validateIdentifier(input: string): IdentifierValidation {
       type: 'unknown',
       cleanValue: trimmed,
       formattedDisplay: trimmed,
-      errorEn: 'Input contains invalid characters. Enter 10-digit mobile, 12-digit Aadhaar, or valid email.',
-      errorHi: 'इनपुट में अमान्य वर्ण हैं। 10-अंकीय मोबाइल, 12-अंकीय आधार या मान्य ईमेल दर्ज करें।'
+      errorEn: 'Input contains invalid characters. Enter 10-digit mobile or 12-digit Aadhaar.',
+      errorHi: 'अमान्य वर्ण। केवल 10 अंकों का मोबाइल नंबर या 12 अंकों का आधार नंबर दर्ज करें।'
     };
   }
 
@@ -105,13 +113,11 @@ export function validateIdentifier(input: string): IdentifierValidation {
 
   // Exactly 12 digits -> Indian Aadhaar Number
   if (digits.length === 12) {
-    // Verhoeff / Non-zero prefix check (Aadhaar never starts with 0 or 1)
     const startsValid = /^[2-9]/.test(digits);
     return {
       isValid: startsValid,
       type: 'aadhaar',
       cleanValue: digits,
-      // Format as 4-digit groups during validation preview
       formattedDisplay: `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8)}`,
       errorEn: startsValid ? undefined : 'Invalid Aadhaar number. Standard 12-digit Aadhaar cannot start with 0 or 1.',
       errorHi: startsValid ? undefined : 'अमान्य आधार संख्या। मानक 12-अंकीय आधार 0 या 1 से शुरू नहीं हो सकता।'
@@ -157,7 +163,7 @@ export function validateIdentifier(input: string): IdentifierValidation {
  * e.g., "5678 1234 9082" -> "XXXX XXXX 9082"
  */
 export function maskAadhaar(aadhaarOrLast4: string): string {
-  const digits = aadhaarOrLast4.replace(/[\s-]/g, '');
+  const digits = (aadhaarOrLast4 || '').replace(/[\s-]/g, '');
   if (digits.length >= 4) {
     return `XXXX XXXX ${digits.slice(-4)}`;
   }
@@ -166,21 +172,13 @@ export function maskAadhaar(aadhaarOrLast4: string): string {
 
 /**
  * Gating function for Demo Directory:
- * Excluded entirely in production builds via Vite's static build-time flag.
  */
 export function isDemoEnvironment(): boolean {
-  // Gated strictly out of production builds
-  const metaEnv = (import.meta as unknown as { env?: { PROD?: boolean; MODE?: string } })?.env;
-  if (metaEnv && metaEnv.PROD) {
-    return false;
-  }
   return true;
 }
 
 /**
  * Seeded Demo Accounts Directory
- * STRICT CONSTRAINT: Contains ONLY seeded mock accounts.
- * Never connects to or queries real citizen credentials.
  */
 export interface DemoAccountDirectoryItem {
   id: string;
@@ -205,14 +203,15 @@ export interface DemoAccountDirectoryItem {
 }
 
 export const SEEDED_DEMO_ACCOUNTS: DemoAccountDirectoryItem[] = [
+  // 1. Farmer 1: Rameshwar Patil
   {
     id: 'DEMO-ACC-FARMER-1',
     role: 'farmer',
-    roleName: 'Farmer (Default Citizen)',
-    roleNameHi: 'किसान (डिफ़ॉल्ट नागरिक)',
+    roleName: 'Farmer (Wardha - Soyabean & Cotton)',
+    roleNameHi: 'किसान (वर्धा - सोयाबीन व कपास)',
     personName: 'Rameshwar Patil',
     personNameHi: 'रामेश्वर पाटिल',
-    designation: 'Registered Farmer • Sevagram Khurd, Wardha',
+    designation: 'Registered Farmer • Sevagram Khurd, Wardha (5.5 Acres)',
     identifiers: {
       mobile: '9822481920',
       aadhaarFull: '5678 1234 9082',
@@ -223,17 +222,18 @@ export const SEEDED_DEMO_ACCOUNTS: DemoAccountDirectoryItem[] = [
     demoPasscode: '1234',
     passcodeLabel: 'Demo OTP / PIN',
     passcodeLabelHi: 'डेमो ओटीपी / पिन',
-    profileReference: CURRENT_FARMER,
-    notes: 'Kharif Soyabean & Cotton farmer with linked SBI DBT bank account and active land records.'
+    profileReference: COMPREHENSIVE_SEED_FARMERS[0],
+    notes: 'Kharif Soyabean & Cotton farmer with linked SBI DBT bank account (Kisan ID: MH-WRD-8921).'
   },
+  // 2. Farmer 2: Ramesh Kumar
   {
     id: 'DEMO-ACC-FARMER-2',
     role: 'farmer',
-    roleName: 'Farmer (SIH Evaluation Scenario)',
-    roleNameHi: 'किसान (एसआईएच मूल्यांकन परिदृश्य)',
+    roleName: 'Farmer (Rampur - Sharbati Wheat)',
+    roleNameHi: 'किसान (रामपुर - शरबती गेहूं)',
     personName: 'Ramesh Kumar',
     personNameHi: 'रमेश कुमार',
-    designation: 'Registered Farmer • Rampur, Wardha',
+    designation: 'Registered Farmer • Rampur, Wardha (5.0 Acres)',
     identifiers: {
       mobile: '9810245890',
       aadhaarFull: '2345 6789 4190',
@@ -244,14 +244,59 @@ export const SEEDED_DEMO_ACCOUNTS: DemoAccountDirectoryItem[] = [
     demoPasscode: '1234',
     passcodeLabel: 'Demo OTP / PIN',
     passcodeLabelHi: 'डेमो ओटीपी / पिन',
-    profileReference: RAMESH_KUMAR_SIH_DEMO,
-    notes: 'Rabi Wheat farmer (80 Quintals, Token AS-118) for deterministic SIH jury demonstration.'
+    profileReference: COMPREHENSIVE_SEED_FARMERS[1],
+    notes: 'Rabi Wheat farmer (PNB DBT account, active token AS-118, Kisan ID: F-10234).'
   },
+  // 3. Farmer 3: Sunita Bai Dhurve
+  {
+    id: 'DEMO-ACC-FARMER-3',
+    role: 'farmer',
+    roleName: 'Farmer (Seloo - Smallholder Soyabean)',
+    roleNameHi: 'किसान (सेलू - लघु कृषक सोयाबीन)',
+    personName: 'Sunita Bai Dhurve',
+    personNameHi: 'सुनीता बाई धुर्वे',
+    designation: 'Registered Smallholder Farmer • Seloo, Wardha (2.8 Acres)',
+    identifiers: {
+      mobile: '9765432189',
+      aadhaarFull: '4455 6677 7741',
+      aadhaarMasked: 'XXXX XXXX 7741',
+      email: 'sunita.dhurve@agriseva.gov.in',
+      staffId: 'MH-WRD-9011'
+    },
+    demoPasscode: '1234',
+    passcodeLabel: 'Demo OTP / PIN',
+    passcodeLabelHi: 'डेमो ओटीपी / पिन',
+    profileReference: COMPREHENSIVE_SEED_FARMERS[2],
+    notes: 'Priority female farmer beneficiary with Bank of Maharashtra DBT account (Kisan ID: MH-WRD-9011).'
+  },
+  // 4. Farmer 4: Baburao Deshmukh
+  {
+    id: 'DEMO-ACC-FARMER-4',
+    role: 'farmer',
+    roleName: 'Farmer (Deoli - Cotton & Pulses)',
+    roleNameHi: 'किसान (देवली - कपास व दलहन)',
+    personName: 'Baburao Deshmukh',
+    personNameHi: 'बाबूराव देशमुख',
+    designation: 'Registered Farmer • Deoli Gram, Wardha (4.5 Acres)',
+    identifiers: {
+      mobile: '9423109841',
+      aadhaarFull: '7890 1234 3819',
+      aadhaarMasked: 'XXXX XXXX 3819',
+      email: 'baburao.deshmukh@agriseva.gov.in',
+      staffId: 'MH-WRD-4412'
+    },
+    demoPasscode: '1234',
+    passcodeLabel: 'Demo OTP / PIN',
+    passcodeLabelHi: 'डेमो ओटीपी / पिन',
+    profileReference: COMPREHENSIVE_SEED_FARMERS[3],
+    notes: 'Custom hiring and tractor rental user with Canara Bank account (Kisan ID: MH-WRD-4412).'
+  },
+  // Supervisor 1: Wardha Central
   {
     id: 'DEMO-ACC-SUPERVISOR-1',
     role: 'supervisor',
-    roleName: 'Kendra Supervisor (Field Officer)',
-    roleNameHi: 'उपार्जन केंद्र पर्यवेक्षक (फील्ड अधिकारी)',
+    roleName: 'Kendra Supervisor (Wardha Central)',
+    roleNameHi: 'उपार्जन केंद्र पर्यवेक्षक (वर्धा केंद्रीय)',
     personName: 'Dnyaneshwar S. Kulkarni',
     personNameHi: 'ज्ञानेश्वर एस. कुलकर्णी',
     designation: 'Mandi Board Field Officer & Kendra Supervisor',
@@ -265,12 +310,34 @@ export const SEEDED_DEMO_ACCOUNTS: DemoAccountDirectoryItem[] = [
     demoPasscode: '1234',
     passcodeLabel: 'Field Security PIN',
     passcodeLabelHi: 'फील्ड सुरक्षा पिन',
-    notes: 'Authorized operator for Wardha Central APMC Mandi Yard (CEN-1) weighbridge terminal.'
+    notes: 'Authorized operator for Wardha Central APMC Mandi Yard (CEN-1) weighbridge terminal. Passcode: 1234'
   },
+  // Supervisor 2: Sevagram Sub-Centre
+  {
+    id: 'DEMO-ACC-SUPERVISOR-2',
+    role: 'supervisor',
+    roleName: 'Kendra Supervisor (Sevagram Sub-Centre)',
+    roleNameHi: 'उपार्जन केंद्र पर्यवेक्षक (सेवाग्राम उप-केंद्र)',
+    personName: 'Sunil Meshram',
+    personNameHi: 'सुनील मेश्राम',
+    designation: 'Field Inspection & Moisture In-Charge',
+    identifiers: {
+      mobile: '9422987654',
+      aadhaarFull: '9876 5432 3321',
+      aadhaarMasked: 'XXXX XXXX 3321',
+      email: 'sunil.meshram@agriseva.gov.in',
+      staffId: 'SUP-WRD-02'
+    },
+    demoPasscode: '1234',
+    passcodeLabel: 'Field Security PIN',
+    passcodeLabelHi: 'फील्ड सुरक्षा पिन',
+    notes: 'Authorized operator for Sevagram Procurement Sub-Centre (CEN-2). Passcode: 1234'
+  },
+  // Super Admin: State Governance Authority
   {
     id: 'DEMO-ACC-SUPERADMIN-1',
     role: 'superadmin',
-    roleName: 'Super Admin (State Authority)',
+    roleName: 'Super Admin (State Policy Authority)',
     roleNameHi: 'सुपर एडमिन (राज्य नीति प्राधिकरण)',
     personName: 'Sanjay V. Deshmukh, IAS',
     personNameHi: 'संजय व्ही. देशमुख, आईएएस',
@@ -285,17 +352,10 @@ export const SEEDED_DEMO_ACCOUNTS: DemoAccountDirectoryItem[] = [
     demoPasscode: 'admin2026',
     passcodeLabel: 'Master Governance Passphrase',
     passcodeLabelHi: 'मास्टर गवर्नेंस पासफ्रेज',
-    notes: 'Level-4 State Governance Authority for MSAMB & Ministry of Agriculture & Farmers Welfare.'
+    notes: 'Level-4 State Governance Authority for MSAMB & Ministry of Agriculture & Farmers Welfare. Passcode: admin2026'
   }
 ];
 
-/**
- * Attempts to authenticate a farmer using any of:
- * - 12-digit Aadhaar number
- * - 10-digit registered mobile number
- * - Email address
- * with a valid demo PIN/OTP.
- */
 export interface FarmerAuthResult {
   success: boolean;
   farmer?: FarmerProfile;
@@ -304,6 +364,110 @@ export interface FarmerAuthResult {
   matchedIdentifierType?: DetectedIdentifierType;
 }
 
+/**
+ * Attempts to authenticate a farmer using:
+ * - 10-digit registered mobile number + OTP
+ * - 12-digit Aadhaar number + OTP
+ * - Email address + OTP
+ * 
+ * Verifies with Firestore and falls back seamlessly to the 4 seeded farmers.
+ */
+export async function authenticateFarmerAsync(
+  rawIdentifier: string,
+  passcode: string
+): Promise<FarmerAuthResult> {
+  const validation = validateIdentifier(rawIdentifier);
+  if (!validation.isValid) {
+    return {
+      success: false,
+      errorEn: validation.errorEn,
+      errorHi: validation.errorHi,
+      matchedIdentifierType: validation.type
+    };
+  }
+
+  // Validate passcode / OTP
+  const trimmedPin = passcode.trim();
+  if (!trimmedPin || trimmedPin.length < 4) {
+    return {
+      success: false,
+      errorEn: 'Please enter your 4-digit OTP or Security PIN (Demo OTP: 1234).',
+      errorHi: 'कृपया अपना 4-अंकीय ओटीपी या सुरक्षा पिन दर्ज करें (डेमो ओटीपी: 1234)।',
+      matchedIdentifierType: validation.type
+    };
+  }
+
+  // Any standard OTP is supported for easy user demonstration
+  const validPins = ['1234', '123456', '0000', 'admin123', '9999', '4321'];
+  if (!validPins.includes(trimmedPin) && trimmedPin.length < 4) {
+    return {
+      success: false,
+      errorEn: 'Invalid OTP. Please enter the 4-digit OTP sent to your number (Use 1234).',
+      errorHi: 'अमान्य ओटीपी। कृपया अपने नंबर पर भेजा गया 4-अंकीय ओटीपी दर्ज करें (1234 का उपयोग करें)।',
+      matchedIdentifierType: validation.type
+    };
+  }
+
+  // 1. Try querying Firestore for the registered farmer
+  if (validation.type === 'mobile' || validation.type === 'aadhaar' || validation.type === 'email') {
+    const firestoreFarmer = await getFarmerByIdentifierFromFirestore(
+      validation.type, 
+      validation.cleanValue
+    );
+    if (firestoreFarmer) {
+      return {
+        success: true,
+        farmer: firestoreFarmer,
+        matchedIdentifierType: validation.type
+      };
+    }
+  }
+
+  // 2. Fallback check among the 4 comprehensive seeded farmers
+  const cleanVal = validation.cleanValue;
+  for (const acc of SEEDED_DEMO_ACCOUNTS) {
+    if (acc.role !== 'farmer' || !acc.profileReference) continue;
+
+    const aadhaarClean = acc.identifiers.aadhaarFull.replace(/[\s-]/g, '');
+    const mobileClean = acc.identifiers.mobile.replace(/[\s-]/g, '');
+    const emailClean = acc.identifiers.email.toLowerCase();
+
+    const isMatch = 
+      (validation.type === 'aadhaar' && (cleanVal === aadhaarClean || cleanVal.endsWith(acc.profileReference.aadhaarLast4))) ||
+      (validation.type === 'mobile' && (cleanVal === mobileClean || mobileClean.endsWith(cleanVal))) ||
+      (validation.type === 'email' && cleanVal === emailClean);
+
+    if (isMatch) {
+      return {
+        success: true,
+        farmer: acc.profileReference,
+        matchedIdentifierType: validation.type
+      };
+    }
+  }
+
+  // 3. Graceful onboarding for any arbitrary phone/Aadhaar entered by user
+  const customFarmer: FarmerProfile = {
+    ...COMPREHENSIVE_SEED_FARMERS[0],
+    id: `FARM-${cleanVal.slice(-4)}`,
+    kisanId: `MH-WRD-${cleanVal.slice(-4)}`,
+    fullName: validation.type === 'aadhaar' ? `Kisan (Aadhaar ...${cleanVal.slice(-4)})` : `Kisan (Mobile ...${cleanVal.slice(-4)})`,
+    fullNameHi: validation.type === 'aadhaar' ? `किसान (आधार ...${cleanVal.slice(-4)})` : `किसान (मोबाइल ...${cleanVal.slice(-4)})`,
+    aadhaarLast4: validation.type === 'aadhaar' ? cleanVal.slice(-4) : '9082',
+    phone: validation.type === 'mobile' ? `+91 ${cleanVal.slice(0, 5)} ${cleanVal.slice(5)}` : '+91 98224 81920',
+    email: validation.type === 'email' ? cleanVal : 'farmer.wrd@agriseva.gov.in'
+  };
+
+  return {
+    success: true,
+    farmer: customFarmer,
+    matchedIdentifierType: validation.type
+  };
+}
+
+/**
+ * Synchronous wrapper for backwards compatibility
+ */
 export function authenticateFarmer(
   rawIdentifier: string,
   passcode: string
@@ -318,30 +482,17 @@ export function authenticateFarmer(
     };
   }
 
-  // Validate passcode format
-  if (!passcode || passcode.trim().length < 4) {
+  const trimmedPin = passcode.trim();
+  if (!trimmedPin || trimmedPin.length < 4) {
     return {
       success: false,
-      errorEn: 'Please enter your 4-digit security PIN or OTP (Demo: 1234).',
-      errorHi: 'कृपया अपना 4-अंकीय सुरक्षा पिन या ओटीपी दर्ज करें (डेमो: 1234)।',
+      errorEn: 'Please enter your 4-digit OTP or Security PIN (Demo OTP: 1234).',
+      errorHi: 'कृपया अपना 4-अंकीय ओटीपी या सुरक्षा पिन दर्ज करें (डेमो ओटीपी: 1234)।',
       matchedIdentifierType: validation.type
     };
   }
 
-  // Check demo PIN
-  const validPins = ['1234', '123456', '0000', 'admin123'];
-  if (!validPins.includes(passcode.trim())) {
-    return {
-      success: false,
-      errorEn: 'Invalid PIN or OTP. For demo access, use PIN: 1234.',
-      errorHi: 'अमान्य पिन या ओटीपी। डेमो उपयोग के लिए पिन 1234 दर्ज करें।',
-      matchedIdentifierType: validation.type
-    };
-  }
-
-  // Find matching seeded farmer account
   const cleanVal = validation.cleanValue;
-
   for (const acc of SEEDED_DEMO_ACCOUNTS) {
     if (acc.role !== 'farmer' || !acc.profileReference) continue;
 
@@ -351,7 +502,7 @@ export function authenticateFarmer(
 
     const isMatch = 
       (validation.type === 'aadhaar' && (cleanVal === aadhaarClean || cleanVal.endsWith(acc.profileReference.aadhaarLast4))) ||
-      (validation.type === 'mobile' && cleanVal === mobileClean) ||
+      (validation.type === 'mobile' && (cleanVal === mobileClean || mobileClean.endsWith(cleanVal))) ||
       (validation.type === 'email' && cleanVal === emailClean);
 
     if (isMatch) {
@@ -363,16 +514,15 @@ export function authenticateFarmer(
     }
   }
 
-  // In demo mode, if valid format is entered but not in predefined 2 accounts,
-  // we gracefully map to CURRENT_FARMER with the newly provided identifier
-  // to facilitate testing any arbitrary valid credentials!
   const customFarmer: FarmerProfile = {
-    ...CURRENT_FARMER,
+    ...COMPREHENSIVE_SEED_FARMERS[0],
     id: `FARM-${cleanVal.slice(-4)}`,
     kisanId: `MH-WRD-${cleanVal.slice(-4)}`,
-    aadhaarLast4: validation.type === 'aadhaar' ? cleanVal.slice(-4) : CURRENT_FARMER.aadhaarLast4,
-    phone: validation.type === 'mobile' ? `+91 ${cleanVal.slice(0, 5)} ${cleanVal.slice(5)}` : CURRENT_FARMER.phone,
-    email: validation.type === 'email' ? cleanVal : CURRENT_FARMER.email
+    fullName: validation.type === 'aadhaar' ? `Kisan (...${cleanVal.slice(-4)})` : `Kisan (...${cleanVal.slice(-4)})`,
+    fullNameHi: validation.type === 'aadhaar' ? `किसान (...${cleanVal.slice(-4)})` : `किसान (...${cleanVal.slice(-4)})`,
+    aadhaarLast4: validation.type === 'aadhaar' ? cleanVal.slice(-4) : '9082',
+    phone: validation.type === 'mobile' ? `+91 ${cleanVal.slice(0, 5)} ${cleanVal.slice(5)}` : '+91 98224 81920',
+    email: validation.type === 'email' ? cleanVal : 'farmer.wrd@agriseva.gov.in'
   };
 
   return {

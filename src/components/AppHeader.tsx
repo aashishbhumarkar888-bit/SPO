@@ -27,6 +27,8 @@ interface AppHeaderProps {
   isOffline: boolean;
   onToggleOffline: () => void;
   onOpenFarmerLogin?: () => void;
+  onOpenSupervisorLogin?: () => void;
+  onOpenSuperAdminLogin?: () => void;
   farmerName?: string;
   currentRole?: AppRole;
   onGoToLanding?: () => void;
@@ -43,6 +45,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isOffline,
   onToggleOffline,
   onOpenFarmerLogin,
+  onOpenSupervisorLogin,
+  onOpenSuperAdminLogin,
   farmerName,
   currentRole = 'farmer',
   onGoToLanding,
@@ -91,6 +95,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               {isOffline ? <WifiOff className="w-3 h-3 text-black" /> : <Wifi className="w-3 h-3 text-emerald-400" />}
               <span className="hidden xs:inline">{isOffline ? t.offlineCached : t.onlineSync}</span>
             </button>
+
+            {/* Restricted Officer / Departmental Access (Discreet for authorized staff) */}
+            {(currentRole === 'landing' || currentRole === 'farmer') && onOpenSupervisorLogin && (
+              <button
+                onClick={onOpenSupervisorLogin}
+                title={language === 'hi' ? 'केवल अधिकृत कर्मचारियों हेतु (Secret PIN Required)' : 'Official Staff Login (Secret PIN Required)'}
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/30 hover:bg-black/50 text-white/90 border border-white/20 transition-all text-[11px] font-semibold"
+              >
+                <ShieldCheck className="w-3 h-3 text-amber-400" />
+                <span className="hidden sm:inline">{language === 'hi' ? 'अधिकारी लॉगिन' : 'Officer Login'}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

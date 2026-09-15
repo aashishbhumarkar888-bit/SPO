@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Farmers directory:
+    // Anyone in the portal can read farmer records for validation/tokens, 
+    // and authenticated farmers or staff can write/update.
+    match /farmers/{farmerId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Tokens & Mandi passes:
+    // Read and create/update tokens
+    match /tokens/{tokenId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Staff and admins directory:
+    match /staff_users/{staffId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Audit logs:
+    match /audit_logs/{logId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+  }
+}

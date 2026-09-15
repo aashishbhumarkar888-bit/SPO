@@ -33,6 +33,7 @@ import { playAudioChime } from './utils/speech';
 import { TimeService } from './services/timeService';
 import { notificationService } from './services/notificationService';
 import { eventBus } from './services/eventBus';
+import { initializeFirestoreData, saveFarmerToFirestore, saveTokenToFirestore } from './services/firestoreDbService';
 import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles } from 'lucide-react';
 
 export default function App() {
@@ -140,6 +141,11 @@ export default function App() {
       localStorage.removeItem('spo_superadmin_session');
     }
   }, [superAdminSession]);
+
+  // Seed and verify Firebase Firestore database tables & collections
+  useEffect(() => {
+    initializeFirestoreData();
+  }, []);
 
   // Security modals & Jury demo states
   const [isFarmerLoginModalOpen, setIsFarmerLoginModalOpen] = useState<boolean>(false);
@@ -387,6 +393,7 @@ export default function App() {
   // Farmer creates a new booking
   const handleAddToken = (newToken: AgriToken) => {
     setTokens(prev => [newToken, ...prev]);
+    saveTokenToFirestore(newToken);
     auditLogger.log({
       action: 'BOOKING_CREATED',
       actorRole: 'FARMER',
@@ -554,6 +561,8 @@ export default function App() {
           playAudioChime();
         }}
         onOpenFarmerLogin={() => setIsFarmerLoginModalOpen(true)}
+        onOpenSupervisorLogin={() => setIsSupervisorModalOpen(true)}
+        onOpenSuperAdminLogin={() => setIsSuperAdminModalOpen(true)}
         farmerName={farmer.fullName}
         currentRole={currentRole}
         onGoToLanding={() => setCurrentRole('landing')}
