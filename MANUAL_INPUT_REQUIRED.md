@@ -146,6 +146,57 @@
 
 ---
 
+## 11. HOW TO LOG IN AS SUPERVISOR / SUPERADMIN
+
+**IMPORTANT:** Hardcoded passwords have been permanently removed. To log into the application as a staff member (Supervisor or SuperAdmin), you MUST provision the accounts in Firebase Auth first. 
+
+### Identity & Role Mapping Mechanism
+
+1. **Authentication:** The frontend strictly uses standard Firebase Authentication (Email/Password). 
+2. **Authorization:** Once Firebase issues an ID token, the backend cryptographically verifies it and extracts the `email`.
+3. **Role Assignment:** The backend looks up the email in the `SEEDED_STAFF_ADMINS` array (located in `src/services/firestoreDbService.ts`). 
+   - If the email exactly matches a record with `role: "supervisor"`, the server issues a Supervisor JWT.
+   - If the email exactly matches a record with `role: "superadmin"`, the server issues a SuperAdmin JWT.
+   - If the email is not found, the server rejects the login with `403 Forbidden`.
+
+*Note: `SEEDED_STAFF_ADMINS` is currently a temporary authorization configuration. For final production operations, this array should be migrated to Firebase Custom Claims or a protected database table.*
+
+### Steps to Configure and Log In
+
+**Step 1: Firebase Project Configuration**
+- Ensure you have a single Firebase Project configured.
+- Ensure the **same** Firebase project is configured in your frontend (`src/services/firebaseConfig.ts` environment variables) and backend (`FIREBASE_SERVICE_ACCOUNT` environment variable).
+- In the Firebase Console, go to **Authentication > Sign-in method** and enable **Email/Password**.
+
+**Step 2: Server Environment Variables**
+Ensure your local or production backend has the following environment variables:
+- `JWT_SECRET`: A secure random string used to sign sessions.
+- `FIREBASE_SERVICE_ACCOUNT`: The stringified JSON of your Firebase Service Account (from Project Settings > Service accounts).
+
+**Step 3: Create Staff Accounts in Firebase Auth**
+Currently, actual staff accounts DO NOT exist. Passwords are NOT stored in this repository. You must manually create them:
+1. Go to the Firebase Console > Authentication > Users > Add user.
+2. Create an account with the exact email address defined in `SEEDED_STAFF_ADMINS`:
+   - For Supervisor: `supervisor.wardha@agriseva.gov.in` (mapped to SUP-WRD-01)
+   - For SuperAdmin: `admin.msamb@agriseva.gov.in` (mapped to ADMIN-MH-STATE-01)
+3. Set a strong password of your choice in the Firebase Console. Remember this password.
+
+**Step 4: Using the UI to Log In**
+1. Start both the frontend and backend servers.
+2. For Supervisor:
+   - Click "Login as Supervisor" in the UI.
+   - In the "Authorized Supervisor ID" field, enter the ID (e.g., `SUP-WRD-01`). The system maps this internally to `supervisor.wardha@agriseva.gov.in`. (Alternatively, if you use the Demo Panel in development, it will auto-fill the ID).
+   - In the "Terminal Passcode / Password" field, enter the **password you just created in Firebase Console**.
+3. For SuperAdmin:
+   - Click "Login as SuperAdmin" in the UI.
+   - In the "Authorized State Officer ID" field, enter `ADMIN-MH-STATE-01`.
+   - In the "Master Passphrase / Password" field, enter the **password you just created in Firebase Console**.
+
+**Step 5: Successful Authentication**
+If successful, Firebase will authenticate the credentials and pass a secure token to the server. The server will verify the email, confirm the role in `SEEDED_STAFF_ADMINS`, and issue an HttpOnly `spo_session` cookie. The React app will refresh its state and grant you access to the authorized dashboard.
+
+---
+
 ## Summary
 
 | Item | Type | Blocking Phase |

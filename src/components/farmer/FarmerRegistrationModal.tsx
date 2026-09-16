@@ -170,7 +170,9 @@ export const FarmerRegistrationModal: React.FC<FarmerRegistrationModalProps> = (
     setIsSubmitting(true);
 
     try {
-      const uniqueSuffix = Math.floor(1000 + Math.random() * 9000);
+      const randArray = new Uint32Array(1);
+      crypto.getRandomValues(randArray);
+      const uniqueSuffix = (randArray[0] % 9000) + 1000;
       const randomId = `FARM-${Date.now().toString().slice(-4)}${uniqueSuffix}`;
       const stateCode = stateName.slice(0, 2).toUpperCase();
       const distCode = district.slice(0, 3).toUpperCase();

@@ -61,6 +61,19 @@ const authenticateSession = (req: express.Request, res: express.Response, next: 
   }
 };
 
+const requireRole = (allowedRoles: string[]) => {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const user = (req as any).user;
+    if (!user || !user.role) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: No valid role found' });
+    }
+    if (!allowedRoles.includes(user.role)) {
+      return res.status(403).json({ success: false, error: 'Forbidden: Insufficient privileges' });
+    }
+    next();
+  };
+};
+
 const otpSendLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Limit each IP to 5 OTP requests per window
@@ -231,24 +244,32 @@ app.post('/api/auth/verify-smtp-otp', otpVerifyLimiter, (req, res) => {
 });
 
 // API 4: Python + Pandas + Scikit-Learn Dynamic Queue Reallocation & Service Time Predictor
-app.post('/api/ml/reallocate-and-predict', authenticateSession, (req, res) => {
+app.post('/api/ml/reallocate-and-predict', authenticateSession, requireRole(['supervisor', 'superadmin']), (req, res) => {
   try {
     const { tokens, counters } = req.body;
-    const pythonScriptPath = path.join(process.cwd(), 'ml', 'dynamic_allocator.py');
+    
+    // Strict Input Validation
+    if (!tokens || !Array.isArray(tokens)) {
+      return res.status(400).json({ error: 'Invalid input: tokens must be an array' });
+    }
+    if (tokens.length > 1000) {
+      return res.status(400).json({ error: 'Payload too large: maximum 1000 tokens allowed' });
+    }
+    const safeCounters = Number.isInteger(counters) && counters > 0 && counters <= 50 ? counters : 4;
 
+    const pythonScriptPath = path.join(process.cwd(), 'ml', 'dynamic_allocator.py');
     const inputPayload = JSON.stringify({
-      tokens: tokens || [],
-      counters: counters || 4
+      tokens: tokens,
+      counters: safeCounters
     });
 
     execFile('python3', [pythonScriptPath, inputPayload], { maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
       if (error) {
-        console.error('Python ML execution error:', error, stderr);
-        // Fallback calculation if Python execution encountered an issue
+        // Safe server-side logging without exposing stack traces to client
+        console.error('Python ML execution error:', error.message);
         return res.status(500).json({
           status: 'error',
-          message: 'Python script execution failed',
-          details: stderr || error.message
+          message: 'Prediction service temporarily unavailable due to internal error.'
         });
       }
 
@@ -256,16 +277,16 @@ app.post('/api/ml/reallocate-and-predict', authenticateSession, (req, res) => {
         const parsed = JSON.parse(stdout.trim());
         return res.json(parsed);
       } catch (parseErr) {
-        console.error('Failed to parse Python ML stdout:', stdout);
+        console.error('Failed to parse Python ML stdout');
         return res.status(500).json({
           status: 'error',
-          message: 'Failed to parse ML response from Python',
-          raw: stdout
+          message: 'Invalid response from prediction engine.'
         });
       }
     });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'ML prediction request failed' });
+    console.error('ML endpoint error:', err.message);
+    return res.status(500).json({ error: 'ML prediction request failed unexpectedly' });
   }
 });
 

@@ -82,7 +82,7 @@ export const SuperAdminLoginModal: React.FC<SuperAdminLoginModalProps> = ({
         district: 'Statewide',
         loginTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         tokenExpiresAt: expires.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        gatewaySessionId: `MSAMB-SEC-${Math.floor(100000 + Math.random() * 900000)}`,
+        gatewaySessionId: `MSAMB-SEC-${crypto.randomUUID().replace(/-/g, '').substring(0, 6).toUpperCase()}`,
         terminalIp: '10.42.0.1 (NIC Secure GovNet)',
         clearanceLevel: staffRecord.clearanceLevel as any
       };

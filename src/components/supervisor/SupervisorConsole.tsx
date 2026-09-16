@@ -122,7 +122,7 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
     const newRecord: ProcurementRecord = {
       id: `PROC-${Date.now().toString().slice(-4)}`,
       tokenId: `TOK-${Date.now().toString().slice(-3)}`,
-      slipNumber: `MND-2026-${Math.floor(910 + Math.random() * 80)}`,
+      slipNumber: `MND-2026-${Math.floor(Date.now() % 1000)}`,
       farmerName: newFarmerName,
       farmerNameHi: newFarmerName,
       kisanId: newKisanId,
@@ -137,7 +137,7 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
       mspPerQuintal: mspRate,
       totalGrossPayable: grossPayable,
       dbtStatus: 'Advice Generated',
-      utrNumber: `SBI${Math.floor(10000000000 + Math.random() * 90000000000)}`,
+      utrNumber: `SBI${crypto.randomUUID().replace(/-/g, '').substring(0, 11).toUpperCase()}`,
       timestamp: 'Just now'
     };
 

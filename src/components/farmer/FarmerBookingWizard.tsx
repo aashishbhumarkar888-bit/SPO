@@ -65,7 +65,9 @@ export const FarmerBookingWizard: React.FC<FarmerBookingWizardProps> = ({
   const handleConfirmBooking = () => {
     playAudioChime();
 
-    const randomNum = Math.floor(111 + Math.random() * 88);
+    const randArray = new Uint32Array(1);
+    crypto.getRandomValues(randArray);
+    const randomNum = (randArray[0] % 88) + 111;
     const tokenStr = `AS-${randomNum}`;
 
     const newToken: AgriToken = {

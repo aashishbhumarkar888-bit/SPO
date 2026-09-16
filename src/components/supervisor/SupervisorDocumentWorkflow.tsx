@@ -100,7 +100,9 @@ export const SupervisorDocumentWorkflow: React.FC<SupervisorDocumentWorkflowProp
     const mspRate = crop.includes('Soyabean') ? 4892 : (crop.includes('Cotton') ? 7121 : 2275);
     const isFaq = moisturePercent <= 12.0;
     const grossPayable = Math.round(netWeightQuintals * mspRate);
-    const slipNum = `MND-2026-${Math.floor(920 + Math.random() * 70)}`;
+    const randVal = new Uint32Array(1);
+    crypto.getRandomValues(randVal);
+    const slipNum = `MND-2026-${(randVal[0] % 70) + 920}`;
 
     const newRecord: ProcurementRecord = {
       id: `PROC-DOC-${Date.now().toString().slice(-4)}`,
@@ -120,7 +122,7 @@ export const SupervisorDocumentWorkflow: React.FC<SupervisorDocumentWorkflowProp
       mspPerQuintal: mspRate,
       totalGrossPayable: grossPayable,
       dbtStatus: 'Advice Generated',
-      utrNumber: `SBI${Math.floor(10000000000 + Math.random() * 90000000000)}`,
+      utrNumber: `SBI${crypto.randomUUID().replace(/-/g, '').substring(0, 11).toUpperCase()}`,
       timestamp: 'Just now (Verified Document Inward)'
     };
 

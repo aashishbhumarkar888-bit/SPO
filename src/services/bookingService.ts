@@ -125,7 +125,9 @@ class BookingDomainService {
     }
 
     // 5. Generate secure token
-    const tokenNum = `AS-${Math.floor(100 + Math.random() * 900)}`;
+    const randVal = new Uint32Array(1);
+    crypto.getRandomValues(randVal);
+    const tokenNum = `AS-${(randVal[0] % 900) + 100}`;
     const activeAtCentre = existingTokens.filter(t => 
       t.centreId === req.centre.id && 
       t.status !== 'Completed' && 
@@ -133,6 +135,9 @@ class BookingDomainService {
     );
     const assignedPosition = activeAtCentre.length + 1;
     const estimatedWait = assignedPosition * 10;
+
+    const randCounter = new Uint32Array(1);
+    crypto.getRandomValues(randCounter);
 
     const newToken: AgriToken = {
       id: `tok-${Date.now()}`,
@@ -147,7 +152,7 @@ class BookingDomainService {
       centreName: req.centre.name,
       centreNameHi: req.centre.nameHi,
       scheduledTime: req.scheduledTime || '10:30 AM',
-      counterAssigned: Math.floor(Math.random() * 4) + 1,
+      counterAssigned: (randCounter[0] % 4) + 1,
       status: 'Waiting',
       estimatedWaitMins: estimatedWait,
       peopleAhead: Math.max(0, assignedPosition - 1),

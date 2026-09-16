@@ -82,9 +82,9 @@ This roadmap sequences fixes so each phase has meaningful, independently testabl
 |---|------|---------|----------|
 | 2.1 | Install and configure `jsonwebtoken` (or Firebase Admin SDK token verification) | `server.ts`, `package.json` | P1-01 |
 | 2.2 | Create `/api/auth/login` endpoint that issues signed JWT on successful OTP verification | `server.ts` | P1-01 |
-| 2.3 | Add `authMiddleware` that validates JWT on protected endpoints | `server.ts` (new middleware) | P1-01 |
-| 2.4 | Protect `/api/ml/reallocate-and-predict` with auth middleware | `server.ts` | P0-07 |
-| 2.5 | Create `/api/auth/verify-session` endpoint for session refresh | `server.ts` | P1-01 |
+| 2B.1 | Implement reusable Server-Side RBAC middleware (`requireRole`) | `server.ts` | P0-03 | ✅ Complete |
+| 2B.2 | Protect all sensitive Express routes (e.g., `/api/ml/reallocate-and-predict`) with RBAC | `server.ts` | P0-03 | ✅ Complete |
+| 2B.3 | Completely remove fallback to localStorage for security bounds | `App.tsx` | P0-03 | ✅ Complete |
 | 2.6 | Move session state from localStorage to httpOnly cookie or secure token storage | `App.tsx` | P1-01 |
 | 2.7 | Implement server-side RBAC middleware using JWT role claims | `server.ts` (new) | P1-02 |
 | 2.8 | Set Firebase custom claims for supervisor/admin roles | Firebase Admin SDK | P1-02 |
