@@ -23,7 +23,8 @@ import {
   FileCheck,
   User,
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  Sprout
 } from 'lucide-react';
 import { 
   AgriToken, 
@@ -38,6 +39,10 @@ import { IntegrationBadge } from '../common/IntegrationBadge';
 import { SupervisorQuickReport } from './SupervisorQuickReport';
 import { SupervisorDocumentWorkflow } from './SupervisorDocumentWorkflow';
 import { SupervisorProfileTab } from './SupervisorProfileTab';
+import { AdminFarmerRegistryTab } from '../common/AdminFarmerRegistryTab';
+import { DynamicExcelDashboard } from '../common/DynamicExcelDashboard';
+import { MlQueueRebalancerModal } from './MlQueueRebalancerModal';
+import { Cpu } from 'lucide-react';
 
 interface SupervisorConsoleProps {
   tokens: AgriToken[];
@@ -50,6 +55,7 @@ interface SupervisorConsoleProps {
   fleet: MachineryAsset[];
   onDispatchAsset: (assetId: string, farmerName: string, village: string) => void;
   onRecallAsset: (assetId: string) => void;
+  onBulkUpdateTokens?: (tokens: AgriToken[]) => void;
   language: LanguageCode;
   onExit?: () => void;
   session?: SupervisorSession | null;
@@ -69,6 +75,7 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
   fleet,
   onDispatchAsset,
   onRecallAsset,
+  onBulkUpdateTokens,
   language,
   onExit,
   session,
@@ -76,7 +83,8 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
   onToggleTheme,
   onLanguageChange
 }) => {
-  const [activeTab, setActiveTab] = useState<'queue' | 'weighbridge' | 'fleet' | 'reports' | 'profile'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'weighbridge' | 'excel-dashboard' | 'fleet' | 'farmers' | 'reports' | 'profile'>('queue');
+  const [isMlModalOpen, setIsMlModalOpen] = useState(false);
   const [weighbridgeMode, setWeighbridgeMode] = useState<'document' | 'scale'>('document');
   const [counterFilter, setCounterFilter] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -305,6 +313,18 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
           </button>
 
           <button
+            onClick={() => setActiveTab('excel-dashboard')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'excel-dashboard'
+                ? 'bg-[#0B5D3B] text-white shadow-xs'
+                : 'text-[#063B2A]/70 hover:text-[#063B2A]'
+            }`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-amber-500" />
+            <span>{language === 'hi' ? 'एक्सेल ऑटो-डैशबोर्ड' : 'Dynamic Excel BI'}</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('fleet')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'fleet'
@@ -326,6 +346,18 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
           >
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Pacing & Reports</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('farmers')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'farmers'
+                ? 'bg-[#168A5B] text-white shadow-xs'
+                : 'text-[#063B2A]/70 hover:text-[#063B2A]'
+            }`}
+          >
+            <Sprout className="w-3.5 h-3.5" />
+            <span>{language === 'hi' ? 'किसान डायरेक्टरी' : 'Farmer Registry'}</span>
           </button>
 
           <button
@@ -356,9 +388,20 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
               </span>
               <IntegrationBadge status="SYNCED" spec="Local PWA" featureName="Queue Sync" featureId="AUD-05" />
             </div>
-            <span className="text-xs text-[#063B2A]/70">
-              Active Kendra: Wardha Central APMC • 4 Counters Active
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsMlModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                title="Run Python + Pandas + Scikit-Learn Dynamic Queue Rebalancer"
+              >
+                <Cpu className="w-3.5 h-3.5 text-amber-300" />
+                <span>{language === 'hi' ? 'एआई कतार संतुलन (Python ML)' : 'AI Queue Rebalancer (ML)'}</span>
+              </button>
+              <span className="text-xs text-[#063B2A]/70 hidden sm:inline">
+                Active Kendra: Wardha Central APMC • 4 Counters Active
+              </span>
+            </div>
           </div>
 
           {/* Filters Bar */}
@@ -876,6 +919,14 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
         </div>
       )}
 
+      {/* TAB: Official Dynamic Excel & CSV Live Dashboard */}
+      {activeTab === 'excel-dashboard' && (
+        <DynamicExcelDashboard
+          language={language}
+          adminRole="supervisor"
+        />
+      )}
+
       {/* TAB 4: Pacing & Daily Manifest Reports */}
       {activeTab === 'reports' && (
         <SupervisorQuickReport
@@ -884,6 +935,14 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
           language={language}
           centreName="Wardha APMC Central Procurement Hub"
           onExportCsv={handleExportCsvManifest}
+        />
+      )}
+
+      {/* TAB: Official Farmers Registry & e-KYC Verification */}
+      {activeTab === 'farmers' && (
+        <AdminFarmerRegistryTab
+          language={language}
+          userRole="supervisor"
         />
       )}
 
@@ -898,6 +957,19 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
           onLogout={onExit || (() => {})}
         />
       )}
+
+      {/* Machine Learning Queue Rebalancer Modal (Python + Pandas + Scikit-Learn) */}
+      <MlQueueRebalancerModal
+        isOpen={isMlModalOpen}
+        onClose={() => setIsMlModalOpen(false)}
+        language={language}
+        tokens={tokens}
+        onApplyReallocations={(updated) => {
+          if (onBulkUpdateTokens) {
+            onBulkUpdateTokens(updated);
+          }
+        }}
+      />
     </div>
   );
 };

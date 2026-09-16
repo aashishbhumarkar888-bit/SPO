@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Volume2, 
   Clock, 
@@ -13,12 +13,14 @@ import {
   Barcode,
   Ticket,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Maximize2
 } from 'lucide-react';
 import { AgriToken, LanguageCode, FarmerProfile } from '../../types';
 import { getTranslations } from '../../i18n';
 import { normalizeStatus, STATUS_DEFINITIONS } from '../../domain/statusModel';
 import { speakAnnouncement, playAudioChime } from '../../utils/speech';
+import { MandiGateQrModal } from './MandiGateQrModal';
 
 interface FarmerLiveQueueViewProps {
   token: AgriToken;
@@ -36,6 +38,7 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
   onNavigateToTab
 }) => {
   const t = getTranslations(language);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const standardStatus = normalizeStatus(token.status);
   const statusMeta = STATUS_DEFINITIONS[standardStatus];
 
@@ -86,11 +89,23 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
             </p>
           </div>
 
-          <div className="sm:text-right flex sm:flex-col items-baseline sm:items-end justify-between gap-2 bg-white/10 dark:bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-white/10">
-            <span className="text-xs text-white/70 block">{t.tokenNumber}</span>
-            <span className="text-3xl sm:text-4xl font-mono font-black text-amber-300 tracking-tight">
-              {token.tokenNumber}
-            </span>
+          <div className="sm:text-right flex sm:flex-col items-baseline sm:items-end justify-between gap-2.5 bg-white/10 dark:bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-white/10">
+            <div>
+              <span className="text-xs text-white/70 block">{t.tokenNumber}</span>
+              <span className="text-3xl sm:text-4xl font-mono font-black text-amber-300 tracking-tight">
+                {token.tokenNumber}
+              </span>
+            </div>
+
+            {/* Prominent Show QR Pass Button in Header */}
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold transition-all active:scale-95 flex items-center gap-1.5 shadow-md hover:shadow-lg cursor-pointer"
+            >
+              <QrCode className="w-4 h-4 text-slate-900" />
+              <span>{language === 'hi' ? 'गेट ई-पास QR कोड' : 'Show QR Pass'}</span>
+            </button>
           </div>
         </div>
 
@@ -191,14 +206,22 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
 
           {/* QR & Barcode Section for Fast ANPR & Gate Entry */}
           <div className="border-t border-[#E2ECE6] dark:border-[#1D4334] pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="p-2.5 bg-white dark:bg-[#F0FAF5] rounded-xl border border-slate-300 dark:border-white shadow-xs">
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(true)}
+              className="flex items-center gap-3.5 text-left group cursor-pointer hover:opacity-90 transition-opacity"
+              title={language === 'hi' ? 'बड़ा क्यूआर कोड देखने हेतु क्लिक करें' : 'Click to enlarge scannable QR Pass'}
+            >
+              <div className="p-2.5 bg-white dark:bg-[#F0FAF5] rounded-xl border border-slate-300 dark:border-white shadow-xs group-hover:scale-105 transition-transform">
                 <QrCode className="w-14 h-14 text-slate-900" />
               </div>
               <div className="text-xs space-y-0.5">
                 <p className="font-bold text-[#063B2A] dark:text-[#F0FAF5] flex items-center gap-1.5 font-serif-display">
                   <span>Fast-Track ANPR Gate Barcode</span>
                   <Barcode className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                  <span className="text-[10px] bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 px-1.5 py-0.2 rounded font-mono">
+                    {language === 'hi' ? 'क्लिक करें' : 'Click to View'}
+                  </span>
                 </p>
                 <p className="text-[11px] text-[#2C5343] dark:text-[#85AFA0]">
                   {t.qrInstruction}
@@ -207,9 +230,18 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
                   AUTH-KEY: SPO-WHD-{token.tokenNumber}-{farmer.kisanId}
                 </p>
               </div>
-            </div>
+            </button>
 
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setIsQrModalOpen(true)}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
+              >
+                <QrCode className="w-4 h-4 text-slate-950" />
+                <span>{language === 'hi' ? 'गेट ई-पास देखें' : 'Show QR Pass'}</span>
+              </button>
+
               <a
                 href="tel:18001801551"
                 className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-[#C7DCD1] dark:border-[#2B5E4A] hover:bg-white dark:hover:bg-[#1A3C2F] text-xs font-bold text-[#063B2A] dark:text-[#F0FAF5] flex items-center justify-center gap-1.5 transition-colors"
@@ -229,6 +261,15 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Scannable Mandi Gate QR Pass Modal */}
+      <MandiGateQrModal
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+        token={token}
+        farmer={farmer}
+        language={language}
+      />
     </div>
   );
 };

@@ -15,13 +15,17 @@ import {
   Sparkles,
   Volume2,
   User,
-  LogOut
+  LogOut,
+  Sprout,
+  FileSpreadsheet
 } from 'lucide-react';
 import { BusinessRuleConfig, LanguageCode, SuperAdminSession } from '../../types';
 import { INITIAL_BUSINESS_RULES } from '../../data/agriMockData';
 import { speakAnnouncement, playAudioChime } from '../../utils/speech';
 import { IntegrationBadge } from '../common/IntegrationBadge';
 import { SuperAdminProfileTab } from './SuperAdminProfileTab';
+import { AdminFarmerRegistryTab } from '../common/AdminFarmerRegistryTab';
+import { DynamicExcelDashboard } from '../common/DynamicExcelDashboard';
 
 interface SuperAdminConsoleProps {
   language: LanguageCode;
@@ -40,7 +44,7 @@ export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({
   onToggleTheme,
   onLanguageChange 
 }) => {
-  const [activeTab, setActiveTab] = useState<'network' | 'rules' | 'users' | 'languages' | 'broadcast' | 'profile'>('rules');
+  const [activeTab, setActiveTab] = useState<'network' | 'rules' | 'users' | 'farmers' | 'excel-dashboard' | 'languages' | 'broadcast' | 'profile'>('rules');
   const [rules, setRules] = useState<BusinessRuleConfig>(INITIAL_BUSINESS_RULES);
   const [broadcastText, setBroadcastText] = useState(INITIAL_BUSINESS_RULES.alertEmergencyBroadcast);
   const [broadcastTextHi, setBroadcastTextHi] = useState(INITIAL_BUSINESS_RULES.alertEmergencyBroadcastHi);
@@ -175,6 +179,30 @@ export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({
         >
           <Users className="w-3.5 h-3.5" />
           <span>Role Permissions (RBAC)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('farmers')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 flex-shrink-0 ${
+            activeTab === 'farmers'
+              ? 'bg-[#063B2A] text-white shadow-xs'
+              : 'text-[#063B2A]/70 hover:text-[#063B2A] bg-white border border-[#D7E3DC]'
+          }`}
+        >
+          <Sprout className="w-3.5 h-3.5 text-emerald-500" />
+          <span>{language === 'hi' ? 'किसान पंजीयन व भूमि अभिलेख' : 'Farmer Registry & Land Records'}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('excel-dashboard')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 flex-shrink-0 ${
+            activeTab === 'excel-dashboard'
+              ? 'bg-[#063B2A] text-white shadow-xs'
+              : 'text-[#063B2A]/70 hover:text-[#063B2A] bg-white border border-[#D7E3DC]'
+          }`}
+        >
+          <FileSpreadsheet className="w-3.5 h-3.5 text-amber-500" />
+          <span>{language === 'hi' ? 'एक्सेल ऑटो-डैशबोर्ड' : 'Dynamic Excel BI'}</span>
         </button>
 
         <button
@@ -500,6 +528,11 @@ export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({
         </div>
       )}
 
+      {/* TAB: Official Farmers Registry & e-KYC Directory */}
+      {activeTab === 'farmers' && (
+        <AdminFarmerRegistryTab language={language} userRole="superadmin" />
+      )}
+
       {/* TAB 4: Emergency Weather & Pest Broadcaster */}
       {activeTab === 'broadcast' && (
         <div className="editorial-card rounded-2xl bg-white border border-[#D7E3DC] p-6 space-y-5 shadow-sm">
@@ -569,6 +602,14 @@ export const SuperAdminConsole: React.FC<SuperAdminConsoleProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB: Official Dynamic Excel & CSV Live Dashboard */}
+      {activeTab === 'excel-dashboard' && (
+        <DynamicExcelDashboard
+          language={language}
+          adminRole="superadmin"
+        />
       )}
 
       {/* TAB 5: Administrator Profile, Session Status & Security */}

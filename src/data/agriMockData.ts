@@ -109,6 +109,11 @@ export const CURRENT_FARMER: FarmerProfile = {
   ]
 };
 
+export const FARMER_REGISTRY: FarmerProfile[] = [
+  CURRENT_FARMER,
+  RAMESH_KUMAR_SIH_DEMO
+];
+
 export const SERVICE_CENTRES: ServiceCentre[] = [
   {
     id: 'CEN-A',

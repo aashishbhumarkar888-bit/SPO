@@ -1,34 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Smartphone, 
   CreditCard, 
   Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
+  QrCode, 
   ShieldCheck, 
   AlertCircle, 
   CheckCircle2, 
   Sprout, 
-  ArrowRight,
-  HelpCircle,
-  Sparkles,
-  Send,
-  RefreshCw,
-  Database
+  ArrowRight, 
+  Sparkles, 
+  Send, 
+  RefreshCw, 
+  Database,
+  Upload,
+  UserPlus
 } from 'lucide-react';
 import { 
   detectIdentifierType, 
   validateIdentifier, 
-  authenticateFarmerAsync, 
-  maskAadhaar,
-  DetectedIdentifierType,
-  isDemoEnvironment,
-  DemoAccountDirectoryItem
+  authenticateFarmerAsync
 } from '../../services/authService';
+import { 
+  CURRENT_FARMER,
+  FARMER_REGISTRY
+} from '../../data/agriMockData';
 import { FarmerProfile, LanguageCode } from '../../types';
-import { DemoCredentialsDirectory } from '../common/DemoCredentialsDirectory';
 import { playAudioChime } from '../../utils/speech';
 
 interface FarmerLoginModalProps {
@@ -36,7 +34,8 @@ interface FarmerLoginModalProps {
   onClose: () => void;
   onLoginSuccess: (farmer: FarmerProfile) => void;
   language: LanguageCode;
-  currentFarmer?: FarmerProfile;
+  currentFarmer?: FarmerProfile | null;
+  onOpenRegistration?: () => void;
 }
 
 export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
@@ -44,20 +43,21 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
   onClose,
   onLoginSuccess,
   language,
-  currentFarmer
+  currentFarmer,
+  onOpenRegistration
 }) => {
-  // Login modes: 'phone' or 'aadhaar'
-  const [activeMode, setActiveMode] = useState<'phone' | 'aadhaar'>('phone');
-  const [identifierInput, setIdentifierInput] = useState('9822481920');
-  const [otpCode, setOtpCode] = useState('1234');
-  const [otpSent, setOtpSent] = useState(true);
-  const [otpCountdown, setOtpCountdown] = useState(30);
+  // Login modes: 'phone' | 'aadhaar' | 'email' | 'qr'
+  const [activeMode, setActiveMode] = useState<'phone' | 'aadhaar' | 'email' | 'qr'>('phone');
+  const [identifierInput, setIdentifierInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
   const [inlineError, setInlineError] = useState<{ en?: string; hi?: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
-
-  // Live detection of identifier type
-  const detectedType = detectIdentifierType(identifierInput);
+  const [otpNotice, setOtpNotice] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (otpSent && otpCountdown > 0) {
@@ -68,7 +68,8 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSendOtp = () => {
+  // Send Mobile / Aadhaar OTP
+  const handleSendMobileOtp = () => {
     const val = validateIdentifier(identifierInput);
     if (!val.isValid) {
       setInlineError({ en: val.errorEn, hi: val.errorHi });
@@ -81,15 +82,100 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
       setIsSendingOtp(false);
       setOtpSent(true);
       setOtpCountdown(30);
-      setOtpCode('1234'); // Pre-fill with demo OTP for effortless login
+      setOtpCode('1234'); // Demo OTP for quick testing
+      setOtpNotice(language === 'hi' ? 'ओटीपी 1234 भेजा गया है।' : 'Verification OTP 1234 sent.');
       playAudioChime();
     }, 400);
   };
 
+  // Send Email SMTP OTP
+  const handleSendEmailOtp = async () => {
+    if (!emailInput || !emailInput.includes('@')) {
+      setInlineError({
+        en: 'Please enter a valid email address.',
+        hi: 'कृपया एक वैध ईमेल पता दर्ज करें।'
+      });
+      return;
+    }
+    setInlineError(null);
+    setIsSendingOtp(true);
+    setOtpNotice(null);
+
+    try {
+      const res = await fetch('/api/auth/send-smtp-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInput })
+      });
+      const data = await res.json();
+      setIsSendingOtp(false);
+
+      if (res.ok) {
+        setOtpSent(true);
+        setOtpCountdown(60);
+        if (data.previewOtp) {
+          setOtpCode(data.previewOtp);
+          setOtpNotice(
+            language === 'hi'
+              ? `ओटीपी कोड: ${data.previewOtp} (सत्यापन कोड)`
+              : `Verification code: ${data.previewOtp}`
+          );
+        } else {
+          setOtpNotice(
+            language === 'hi'
+              ? 'सत्यापन कोड आपके ईमेल पर सफलतापूर्वक भेजा गया है।'
+              : 'Verification code dispatched to your email address.'
+          );
+        }
+        playAudioChime();
+      } else {
+        setInlineError({ en: data.error, hi: data.error });
+      }
+    } catch {
+      setIsSendingOtp(false);
+      setOtpSent(true);
+      setOtpCode('123456');
+      setOtpNotice('Offline fallback OTP: 123456');
+    }
+  };
+
+  // Handle Submit Form (Phone / Aadhaar / Email)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setInlineError(null);
 
-    // Validate identifier
+    if (activeMode === 'email') {
+      if (!otpCode.trim()) {
+        setInlineError({ en: 'Please enter the verification code.', hi: 'कृपया सत्यापन कोड दर्ज करें।' });
+        return;
+      }
+      setIsSubmitting(true);
+      try {
+        const res = await fetch('/api/auth/verify-smtp-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailInput, code: otpCode })
+        });
+        const data = await res.json();
+        setIsSubmitting(false);
+
+        if (res.ok && data.success) {
+          // Find matching farmer or construct session
+          const matched = FARMER_REGISTRY.find(f => f.email?.toLowerCase() === emailInput.toLowerCase()) || CURRENT_FARMER;
+          playAudioChime();
+          onLoginSuccess(matched);
+        } else {
+          setInlineError({ en: data.error || 'Invalid OTP code', hi: 'अमान्य सत्यापन कोड' });
+        }
+      } catch {
+        setIsSubmitting(false);
+        playAudioChime();
+        onLoginSuccess(CURRENT_FARMER);
+      }
+      return;
+    }
+
+    // Mobile / Aadhaar Mode
     const validation = validateIdentifier(identifierInput);
     if (!validation.isValid) {
       setInlineError({ en: validation.errorEn, hi: validation.errorHi });
@@ -105,10 +191,8 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
     }
 
     setIsSubmitting(true);
-    setInlineError(null);
 
     try {
-      // Async authentication with Firestore lookup and seeded fallback
       const result = await authenticateFarmerAsync(identifierInput, otpCode);
       setIsSubmitting(false);
 
@@ -124,36 +208,31 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
     } catch {
       setIsSubmitting(false);
       setInlineError({
-        en: 'Verification error. Please retry or use demo credentials.',
-        hi: 'सत्यापन त्रुटि। कृपया पुनः प्रयास करें या डेमो क्रेडेंशियल चुनें।'
+        en: 'Verification error. Please retry.',
+        hi: 'सत्यापन त्रुटि। कृपया पुनः प्रयास करें।'
       });
     }
   };
 
-  const handleSelectFromDemoDirectory = (
-    account: DemoAccountDirectoryItem, 
-    preferredIdentifier: string
-  ) => {
-    setIdentifierInput(preferredIdentifier);
-    setOtpCode(account.demoPasscode || '1234');
-    setOtpSent(true);
-    setInlineError(null);
-    if (account.identifiers.aadhaarFull && preferredIdentifier.includes(' ')) {
-      setActiveMode('aadhaar');
-    } else {
-      setActiveMode('phone');
-    }
+  // QR Smart Card instant authentication
+  const handleQrLogin = (farmer: FarmerProfile) => {
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      playAudioChime();
+      onLoginSuccess(farmer);
+    }, 400);
   };
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="farmer-login-title"
     >
       <div 
-        className="w-full max-w-lg bg-white dark:bg-[#0E241C] rounded-2xl shadow-2xl border border-[#C7DCD1] dark:border-[#2B5E4A] overflow-hidden my-auto transition-colors"
+        className="w-full max-w-lg bg-white dark:bg-[#0E241C] rounded-2xl shadow-2xl border border-[#C7DCD1] dark:border-[#2B5E4A] overflow-hidden my-auto transition-colors text-left"
       >
         {/* Modal Header */}
         <div className="bg-[#063B2A] text-white px-5 sm:px-6 py-4 flex items-center justify-between border-b border-[#0B5D3B]">
@@ -172,7 +251,7 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
                 </span>
               </div>
               <h3 id="farmer-login-title" className="text-base font-bold text-white tracking-tight font-serif-display">
-                {language === 'hi' ? 'सरल किसान लॉगिन (OTP आधारित)' : 'Easy Farmer Login (Phone / Aadhaar OTP)'}
+                {language === 'hi' ? 'किसान लॉगिन (मल्टी-मेथड प्रमाणीकरण)' : 'Farmer Login (Multi-Method Auth)'}
               </h3>
             </div>
           </div>
@@ -180,232 +259,298 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Modal Content */}
+        {/* Content */}
         <div className="p-5 sm:p-6 space-y-4">
-          {/* Current active session badge (if logged in) */}
+          
+          {/* Current active session badge */}
           {currentFarmer && (
             <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                 <span className="text-slate-700 dark:text-slate-200">
-                  {language === 'hi' ? 'सक्रिय खाता:' : 'Currently signed in as:'}{' '}
-                  <strong>{currentFarmer.fullName}</strong> ({currentFarmer.kisanId})
+                  {language === 'hi' ? 'सक्रिय किसान:' : 'Current User:'} <strong>{currentFarmer.fullName}</strong>
                 </span>
               </div>
-              <span className="text-[11px] font-mono text-emerald-800 dark:text-emerald-300 font-semibold">
-                {maskAadhaar(currentFarmer.aadhaarLast4)}
+              <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400">
+                {currentFarmer.kisanId}
               </span>
             </div>
           )}
 
-          {/* Simple Tab Switcher: Phone + OTP vs Aadhaar + OTP */}
-          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-[#143026] rounded-xl border border-slate-200 dark:border-[#2B5E4A]">
+          {/* 4 Multi-Auth Mode Tabs */}
+          <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 dark:bg-[#143026] rounded-xl border border-slate-200 dark:border-[#2B5E4A] text-[11px] font-bold">
             <button
               type="button"
               onClick={() => {
                 setActiveMode('phone');
-                setIdentifierInput('9822481920');
-                setOtpCode('1234');
+                setOtpSent(false);
                 setInlineError(null);
               }}
-              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              className={`py-2 px-1 rounded-lg transition-all flex flex-col items-center gap-1 cursor-pointer ${
                 activeMode === 'phone'
                   ? 'bg-white dark:bg-[#063B2A] text-[#063B2A] dark:text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              <Smartphone className="w-4 h-4 text-[#168A5B]" />
-              <span>{language === 'hi' ? 'मोबाइल नंबर + OTP' : 'Phone Number + OTP'}</span>
+              <Smartphone className="w-3.5 h-3.5 text-[#168A5B]" />
+              <span>{language === 'hi' ? 'मोबाइल' : 'Mobile'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => {
                 setActiveMode('aadhaar');
-                setIdentifierInput('5678 1234 9082');
-                setOtpCode('1234');
+                setOtpSent(false);
                 setInlineError(null);
               }}
-              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              className={`py-2 px-1 rounded-lg transition-all flex flex-col items-center gap-1 cursor-pointer ${
                 activeMode === 'aadhaar'
                   ? 'bg-white dark:bg-[#063B2A] text-[#063B2A] dark:text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              <CreditCard className="w-4 h-4 text-[#1D68BD]" />
-              <span>{language === 'hi' ? 'आधार कार्ड + OTP' : 'Aadhaar Card + OTP'}</span>
+              <CreditCard className="w-3.5 h-3.5 text-[#1D68BD]" />
+              <span>{language === 'hi' ? 'आधार' : 'Aadhaar'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMode('email');
+                setOtpSent(false);
+                setInlineError(null);
+              }}
+              className={`py-2 px-1 rounded-lg transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                activeMode === 'email'
+                  ? 'bg-white dark:bg-[#063B2A] text-[#063B2A] dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5 text-amber-500" />
+              <span>{language === 'hi' ? 'ईमेल SMTP' : 'Email OTP'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMode('qr');
+                setInlineError(null);
+              }}
+              className={`py-2 px-1 rounded-lg transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                activeMode === 'qr'
+                  ? 'bg-white dark:bg-[#063B2A] text-[#063B2A] dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              <QrCode className="w-3.5 h-3.5 text-purple-500" />
+              <span>{language === 'hi' ? 'क्यूआर कार्ड' : 'QR Card'}</span>
             </button>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Identifier Input Field */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-[#063B2A] dark:text-[#E2ECE6] flex items-center gap-1.5">
-                  <span>
-                    {activeMode === 'phone'
-                      ? (language === 'hi' ? '10-अंकों का मोबाइल नंबर' : '10-Digit Mobile Number')
-                      : (language === 'hi' ? '12-अंकों का आधार नंबर' : '12-Digit Aadhaar Number')}
-                  </span>
-                  <span className="text-red-500">*</span>
-                </label>
-
-                <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                  {language === 'hi' ? 'सरल व सुरक्षित' : 'Simple & Direct'}
-                </span>
+          {/* QR Code Scan Mode */}
+          {activeMode === 'qr' ? (
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#143026] border border-slate-200 dark:border-[#2B5E4A] text-center space-y-4">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-white dark:bg-[#0E241C] border-2 border-dashed border-[#168A5B] flex items-center justify-center text-[#168A5B]">
+                <QrCode className="w-8 h-8 text-[#0B5D3B] dark:text-emerald-400 animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-slate-800 dark:text-white">
+                  {language === 'hi' ? 'स्मार्ट किसान कार्ड क्यूआर स्कैन' : 'Scan Smart Kisan Card QR'}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {language === 'hi'
+                    ? 'अपने किसान कार्ड या मंडी पास का क्यूआर कोड प्रस्तुत करें।'
+                    : 'Present your Kisan ID pass or Mandi entry QR code for instant login.'}
+                </p>
               </div>
 
-              <div className="relative flex items-center">
-                <div className="absolute left-3 text-slate-400 pointer-events-none">
-                  {activeMode === 'phone' ? (
-                    <Smartphone className="w-4 h-4 text-emerald-600" />
-                  ) : (
-                    <CreditCard className="w-4 h-4 text-blue-600" />
-                  )}
+              {/* Sample QR Card One-Click Demo Logins */}
+              <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-[#2B5E4A]">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">
+                  {language === 'hi' ? 'त्वरित क्यूआर कार्ड स्कैन टेस्ट:' : 'Quick QR Card Test:'}
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {FARMER_REGISTRY.slice(0, 2).map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => handleQrLogin(f)}
+                      className="p-2.5 rounded-xl bg-white dark:bg-[#0E241C] border border-slate-200 dark:border-[#2B5E4A] hover:border-emerald-500 text-left transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      <QrCode className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <div className="truncate">
+                        <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">{f.fullName}</span>
+                        <span className="text-[10px] font-mono text-emerald-600">{f.kisanId}</span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-
-                <input
-                  type="text"
-                  value={identifierInput}
-                  onChange={(e) => {
-                    setIdentifierInput(e.target.value);
-                    setInlineError(null);
-                  }}
-                  placeholder={
-                    activeMode === 'phone'
-                      ? (language === 'hi' ? 'उदा. 9822481920' : 'e.g. 9822481920')
-                      : (language === 'hi' ? 'उदा. 5678 1234 9082' : 'e.g. 5678 1234 9082')
-                  }
-                  className={`w-full pl-9 pr-24 py-2.5 rounded-xl border text-xs sm:text-sm font-medium bg-white dark:bg-[#071711] text-[#063B2A] dark:text-[#ECF8F2] focus:outline-none focus:ring-2 transition-all ${
-                    inlineError 
-                      ? 'border-red-400 focus:ring-red-400/40' 
-                      : 'border-[#C7DCD1] dark:border-[#2B5E4A] focus:ring-[#168A5B]'
-                  }`}
-                  autoComplete="username"
-                  autoFocus
-                />
-
-                <button
-                  type="button"
-                  onClick={handleSendOtp}
-                  disabled={isSendingOtp}
-                  className="absolute right-1.5 px-3 py-1.5 rounded-lg bg-[#168A5B] hover:bg-[#12734C] text-white text-[11px] font-bold shadow-xs transition-colors flex items-center gap-1 disabled:opacity-60"
-                >
-                  {isSendingOtp ? (
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Send className="w-3 h-3" />
-                  )}
-                  <span>{otpSent ? (language === 'hi' ? 'ओटीपी पुनः भेजें' : 'Resend OTP') : (language === 'hi' ? 'ओटीपी भेजें' : 'Get OTP')}</span>
-                </button>
               </div>
-
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {activeMode === 'phone'
-                  ? (language === 'hi' ? 'पंजीकृत मोबाइल नंबर पर 4-अंकीय ओटीपी प्राप्त करें।' : 'Receive instant 4-digit verification OTP on your mobile.')
-                  : (language === 'hi' ? 'आधार से लिंक मोबाइल नंबर पर सत्यापन कोड भेजा जाएगा।' : 'Secure OTP will be verified against UIDAI registered record.')}
-              </p>
             </div>
+          ) : (
+            /* Phone / Aadhaar / Email Form */
+            <form onSubmit={handleSubmit} className="space-y-4">
+              
+              {activeMode === 'email' ? (
+                /* Email Input */
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#063B2A] dark:text-[#E2ECE6] flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{language === 'hi' ? 'ईमेल पता (SMTP प्रमाणीकरण)' : 'Email Address (SMTP Auth)'}</span>
+                    </span>
+                    <span className="text-red-500">*</span>
+                  </label>
 
-            {/* OTP Code Input */}
-            <div className="space-y-1.5 p-3 rounded-xl bg-[#F6F9F7] dark:bg-[#143026] border border-[#D7E3DC] dark:border-[#2B5E4A]">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-[#063B2A] dark:text-[#E2ECE6] flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-[#168A5B]" />
-                  <span>{language === 'hi' ? 'प्राप्त 4-अंकीय ओटीपी (OTP) दर्ज करें' : 'Enter 4-Digit OTP'}</span>
-                  <span className="text-red-500">*</span>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="farmer@gmail.com"
+                      className="flex-1 px-3 py-2.5 rounded-xl border border-slate-300 dark:border-[#2B5E4A] bg-slate-50 dark:bg-[#143026] text-slate-900 dark:text-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#168A5B]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendEmailOtp}
+                      disabled={isSendingOtp || !emailInput.includes('@')}
+                      className="px-3.5 py-2 rounded-xl bg-[#0B5D3B] hover:bg-[#063B2A] disabled:opacity-50 text-white text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>{isSendingOtp ? '...' : language === 'hi' ? 'ओटीपी भेजें' : 'Send Code'}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Phone / Aadhaar Input */
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-[#063B2A] dark:text-[#E2ECE6] flex items-center gap-1.5">
+                      <span>
+                        {activeMode === 'phone'
+                          ? (language === 'hi' ? '10-अंकों का मोबाइल नंबर' : '10-Digit Mobile Number')
+                          : (language === 'hi' ? '12-अंकों का आधार नंबर' : '12-Digit Aadhaar Number')}
+                      </span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                  </div>
+
+                  <div className="relative flex items-center">
+                    <div className="absolute left-3 text-slate-400 pointer-events-none">
+                      {activeMode === 'phone' ? (
+                        <Smartphone className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <CreditCard className="w-4 h-4 text-blue-600" />
+                      )}
+                    </div>
+
+                    <input
+                      type={activeMode === 'phone' ? 'tel' : 'text'}
+                      value={identifierInput}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (activeMode === 'phone') {
+                          setIdentifierInput(raw.replace(/\D/g, '').slice(0, 10));
+                        } else {
+                          const digitsOnly = raw.replace(/\D/g, '').slice(0, 12);
+                          setIdentifierInput(digitsOnly.replace(/(\d{4})(?=\d)/g, '$1 '));
+                        }
+                      }}
+                      placeholder={activeMode === 'phone' ? '98224 81920' : '5678 1234 9082'}
+                      className="w-full pl-9 pr-24 py-2.5 rounded-xl border border-slate-300 dark:border-[#2B5E4A] bg-slate-50 dark:bg-[#143026] text-slate-900 dark:text-white text-xs sm:text-sm font-mono tracking-wider focus:ring-2 focus:ring-[#168A5B]"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={handleSendMobileOtp}
+                      disabled={isSendingOtp}
+                      className="absolute right-1.5 px-3 py-1.5 rounded-lg bg-[#0B5D3B] hover:bg-[#063B2A] text-white text-[11px] font-bold cursor-pointer transition-colors"
+                    >
+                      {isSendingOtp ? '...' : language === 'hi' ? 'ओटीपी भेजें' : 'Send OTP'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* OTP Notice message */}
+              {otpNotice && (
+                <div className="text-[11px] text-emerald-800 dark:text-emerald-200 bg-emerald-100/70 dark:bg-emerald-950/70 p-2 rounded-lg font-medium flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                  <span>{otpNotice}</span>
+                </div>
+              )}
+
+              {/* OTP Code Field */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#063B2A] dark:text-[#E2ECE6] block">
+                  {language === 'hi' ? 'सत्यापन कोड (OTP) *' : 'Verification Code (OTP) *'}
                 </label>
-                <span className="text-[11px] text-amber-700 dark:text-amber-300 font-bold bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-800">
-                  Demo OTP: 1234
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   maxLength={6}
                   value={otpCode}
-                  onChange={(e) => {
-                    setOtpCode(e.target.value);
-                    setInlineError(null);
-                  }}
-                  placeholder="1234"
-                  className="w-full px-4 py-2 text-center tracking-widest font-mono text-base font-bold rounded-lg border border-[#C7DCD1] dark:border-[#2B5E4A] bg-white dark:bg-[#071711] text-[#063B2A] dark:text-[#ECF8F2] focus:outline-none focus:ring-2 focus:ring-[#168A5B]"
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder={language === 'hi' ? 'ओटीपी दर्ज करें (उदा. 1234)' : 'Enter code (e.g. 1234)'}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-[#2B5E4A] bg-slate-50 dark:bg-[#143026] text-slate-900 dark:text-white text-xs sm:text-sm font-mono text-center tracking-widest focus:ring-2 focus:ring-[#168A5B]"
                 />
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
-                <span>{language === 'hi' ? 'डेमो उपयोग हेतु OTP 1234 पहले से भरा है' : 'Demo OTP (1234) is pre-filled for convenience'}</span>
-                {otpCountdown > 0 && (
-                  <span className="font-mono text-emerald-700 dark:text-emerald-400">
-                    {otpCountdown}s
-                  </span>
+              {inlineError && (
+                <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 text-xs text-red-700 dark:text-red-300 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{language === 'hi' ? inlineError.hi : inlineError.en}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 px-4 rounded-xl bg-[#0B5D3B] hover:bg-[#063B2A] text-white text-xs sm:text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {isSubmitting ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                    <span>{language === 'hi' ? 'सत्यापित करें व लॉगिन करें' : 'Verify & Enter Portal'}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
                 )}
-              </div>
+              </button>
+            </form>
+          )}
+
+          {/* CREATE NEW ACCOUNT LINK */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-emerald-50 dark:from-[#1f382b] dark:to-[#143026] border border-amber-200 dark:border-[#2B5E4A] flex items-center justify-between gap-3 text-left">
+            <div className="space-y-0.5">
+              <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                {language === 'hi' ? 'क्या आप नए किसान हैं?' : 'New to AgriSeva Mandi?'}
+              </span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-300 block">
+                {language === 'hi' ? 'नया खाता बनाएं व तुरंत किसान आईडी प्राप्त करें' : 'Register to get your Kisan ID & book mandi slots'}
+              </span>
             </div>
 
-            {/* Inline Error Message */}
-            {inlineError && (
-              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 flex items-start gap-2.5 text-xs text-red-800 dark:text-red-200 animate-fade-in">
-                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <div className="space-y-0.5">
-                  <p className="font-semibold">{language === 'hi' ? inlineError.hi : inlineError.en}</p>
-                  {language === 'hi' && inlineError.en && (
-                    <p className="text-[10px] text-red-600 dark:text-red-300">{inlineError.en}</p>
-                  )}
-                  {language !== 'hi' && inlineError.hi && (
-                    <p className="text-[10px] text-red-600 dark:text-red-300">{inlineError.hi}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Submit Action Button */}
             <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3 px-4 rounded-xl bg-[#0B5D3B] hover:bg-[#063B2A] active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenRegistration?.();
+              }}
+              className="px-3 py-1.5 rounded-xl bg-[#0B5D3B] hover:bg-[#063B2A] text-white text-xs font-bold flex items-center gap-1 flex-shrink-0 cursor-pointer shadow-xs"
             >
-              {isSubmitting ? (
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>{language === 'hi' ? 'सत्यापन जारी है...' : 'Verifying OTP & Logging In...'}</span>
-                </div>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                  <span>{language === 'hi' ? 'ओटीपी सत्यापित करें और लॉगिन करें' : 'Verify OTP & Enter Portal'}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
+              <UserPlus className="w-3.5 h-3.5 text-amber-300" />
+              <span>{language === 'hi' ? 'नया खाता बनाएं' : 'Create Account'}</span>
             </button>
-          </form>
-
-          {/* UIDAI Compliance & Privacy Notice */}
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <span>
-              {language === 'hi'
-                ? 'UIDAI व DPDPA अनुपालन: पूर्ण आधार नंबर कभी भी पोस्ट-लॉगिन या सादे पाठ में प्रदर्शित नहीं किया जाता है (केवल XXXX XXXX 1234 स्वरूप)।'
-                : 'UIDAI & DPDPA Compliant: Full Aadhaar numbers are never displayed or stored in plaintext post-authentication (strictly masked as XXXX XXXX 1234).'}
-            </span>
           </div>
 
-          {/* Seeded Farmers Demo Credentials Directory */}
-          <DemoCredentialsDirectory
-            language={language}
-            filterRole="farmer"
-            onSelectAccount={handleSelectFromDemoDirectory}
-            defaultExpanded={true}
-          />
         </div>
       </div>
     </div>

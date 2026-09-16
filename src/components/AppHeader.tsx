@@ -95,18 +95,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               {isOffline ? <WifiOff className="w-3 h-3 text-black" /> : <Wifi className="w-3 h-3 text-emerald-400" />}
               <span className="hidden xs:inline">{isOffline ? t.offlineCached : t.onlineSync}</span>
             </button>
-
-            {/* Restricted Officer / Departmental Access (Discreet for authorized staff) */}
-            {(currentRole === 'landing' || currentRole === 'farmer') && onOpenSupervisorLogin && (
-              <button
-                onClick={onOpenSupervisorLogin}
-                title={language === 'hi' ? 'केवल अधिकृत कर्मचारियों हेतु (Secret PIN Required)' : 'Official Staff Login (Secret PIN Required)'}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/30 hover:bg-black/50 text-white/90 border border-white/20 transition-all text-[11px] font-semibold"
-              >
-                <ShieldCheck className="w-3 h-3 text-amber-400" />
-                <span className="hidden sm:inline">{language === 'hi' ? 'अधिकारी लॉगिन' : 'Officer Login'}</span>
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -203,6 +191,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </div>
 
           {/* Citizen Farmer Login / Account Action */}
+          {currentRole === 'landing' && onOpenFarmerLogin && (
+            <button
+              onClick={onOpenFarmerLogin}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#168A5B] hover:bg-[#0B5D3B] text-white transition-all shadow-xs cursor-pointer"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>{t.kisanLogin}</span>
+            </button>
+          )}
+
           {currentRole === 'farmer' && onOpenFarmerLogin && (
             <button
               onClick={onOpenFarmerLogin}
@@ -216,12 +214,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             </button>
           )}
 
-          {/* Exit / Logout for Authenticated Operator or Super Admin */}
-          {(currentRole === 'supervisor' || currentRole === 'superadmin') && onLogoutCurrentRole && (
+          {/* Exit / Logout for Authenticated Farmer, Operator or Super Admin */}
+          {(currentRole === 'farmer' || currentRole === 'supervisor' || currentRole === 'superadmin') && onLogoutCurrentRole && (
             <button
               onClick={onLogoutCurrentRole}
               title="Sign Out Session"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 hover:bg-red-100 transition-all"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline font-bold">{t.signOut}</span>

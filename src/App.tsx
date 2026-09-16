@@ -18,6 +18,8 @@ import { SuperAdminConsole } from './components/superadmin/SuperAdminConsole';
 import { SupervisorLoginModal } from './components/supervisor/SupervisorLoginModal';
 import { SuperAdminLoginModal } from './components/superadmin/SuperAdminLoginModal';
 import { FarmerLoginModal } from './components/farmer/FarmerLoginModal';
+import { FarmerRegistrationModal } from './components/farmer/FarmerRegistrationModal';
+import { KisanMitraVoiceModal } from './components/farmer/KisanMitraVoiceModal';
 import { SihDemoConsoleModal } from './components/demo/SihDemoConsoleModal';
 import { SihEvaluationInspector } from './components/common/SihEvaluationInspector';
 import { PublicLandingGate } from './components/common/PublicLandingGate';
@@ -34,7 +36,7 @@ import { TimeService } from './services/timeService';
 import { notificationService } from './services/notificationService';
 import { eventBus } from './services/eventBus';
 import { initializeFirestoreData, saveFarmerToFirestore, saveTokenToFirestore } from './services/firestoreDbService';
-import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles } from 'lucide-react';
+import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles, Volume2 } from 'lucide-react';
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState<AppRole>(() => {
@@ -49,8 +51,9 @@ export default function App() {
         const sa = localStorage.getItem('spo_superadmin_session');
         if (sa) return 'superadmin';
       }
+      const isFarmerActive = sessionStorage.getItem('spo_farmer_session_active') === 'true';
       const savedFarmer = localStorage.getItem('agriseva_farmer');
-      if (savedFarmer) {
+      if (savedFarmer && isFarmerActive) {
         return 'farmer';
       }
     } catch {
@@ -148,7 +151,18 @@ export default function App() {
   }, []);
 
   // Security modals & Jury demo states
-  const [isFarmerLoginModalOpen, setIsFarmerLoginModalOpen] = useState<boolean>(false);
+  const [isFarmerLoginModalOpen, setIsFarmerLoginModalOpen] = useState<boolean>(() => {
+    try {
+      const isFarmerActive = sessionStorage.getItem('spo_farmer_session_active') === 'true';
+      const isSupActive = !!localStorage.getItem('spo_supervisor_session');
+      const isSaActive = !!localStorage.getItem('spo_superadmin_session');
+      // Prompt for login immediately at the beginning if no active authenticated session
+      return !isFarmerActive && !isSupActive && !isSaActive;
+    } catch {
+      return true;
+    }
+  });
+  const [isFarmerRegistrationModalOpen, setIsFarmerRegistrationModalOpen] = useState<boolean>(false);
   const [isSupervisorModalOpen, setIsSupervisorModalOpen] = useState<boolean>(false);
   const [isSuperAdminModalOpen, setIsSuperAdminModalOpen] = useState<boolean>(false);
   const [isSihDemoOpen, setIsSihDemoOpen] = useState<boolean>(false);
@@ -160,6 +174,7 @@ export default function App() {
     setFarmer(newFarmer);
     setIsFarmerLoginModalOpen(false);
     setCurrentRole('farmer');
+    sessionStorage.setItem('spo_farmer_session_active', 'true');
     localStorage.setItem('agriseva_farmer', JSON.stringify(newFarmer));
     playAudioChime();
     auditLogger.log({
@@ -241,17 +256,21 @@ export default function App() {
     localStorage.removeItem('spo_supervisor_session');
     localStorage.removeItem('spo_superadmin_session');
     localStorage.removeItem('agriseva_farmer');
+    const farmerName = farmer?.fullName || 'Farmer';
+    const kisanId = farmer?.kisanId || 'GUEST';
+    setFarmer(null);
     setSupervisorSession(null);
     setSuperAdminSession(null);
     setCurrentRole('landing');
+    setIsFarmerLoginModalOpen(true);
     playAudioChime();
     auditLogger.log({
       action: 'FARMER_SESSION_PURGED',
       actorRole: 'FARMER',
-      actorId: farmer.kisanId,
+      actorId: kisanId,
       targetEntity: 'SessionStorage',
       targetId: 'CLIENT_CACHE',
-      description: `Farmer ${farmer.fullName} cleanly purged session storage and reset operational cache`
+      description: `Farmer ${farmerName} cleanly purged session storage and reset operational cache`
     });
     notificationService.send({
       type: 'GENERAL',
@@ -335,9 +354,15 @@ export default function App() {
   }, [supervisorSession, superAdminSession]);
 
   // Core synchronized application state
-  const [farmer, setFarmer] = useState<FarmerProfile>(() => {
-    const saved = localStorage.getItem('agriseva_farmer');
-    return saved ? JSON.parse(saved) : CURRENT_FARMER;
+  const [farmer, setFarmer] = useState<FarmerProfile | null>(() => {
+    try {
+      const isFarmerActive = sessionStorage.getItem('spo_farmer_session_active') === 'true';
+      if (!isFarmerActive) return null;
+      const saved = localStorage.getItem('agriseva_farmer');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
   const [tokens, setTokens] = useState<AgriToken[]>(() => {
@@ -397,7 +422,7 @@ export default function App() {
     auditLogger.log({
       action: 'BOOKING_CREATED',
       actorRole: 'FARMER',
-      actorId: farmer.kisanId,
+      actorId: farmer?.kisanId || newToken.kisanId,
       targetEntity: 'AgriToken',
       targetId: newToken.id,
       description: `Created booking ${newToken.tokenNumber} for ${newToken.serviceType} at ${newToken.centreName}`,
@@ -475,7 +500,7 @@ export default function App() {
       status: 'Processing',
       utrNumber: record.utrNumber || `SBI${Date.now()}`,
       date: 'Today',
-      bankMasked: farmer.bankAccount,
+      bankMasked: farmer?.bankAccount || 'XXXX-XXXX-8921',
       description: `DBT advice generated by APMC Weighbridge Slip #${record.slipNumber}`,
       descriptionHi: `तौल पर्ची #${record.slipNumber} के आधार पर डीबीटी भुगतान सलाह जारी`
     };
@@ -541,9 +566,9 @@ export default function App() {
   };
 
   // Get current active token for farmer
-  const activeToken = tokens.find(t => t.kisanId === farmer.kisanId && t.status !== 'Completed')
-    || tokens.find(t => t.kisanId === farmer.kisanId)
-    || tokens[0];
+  const activeToken = farmer
+    ? (tokens.find(t => t.kisanId === farmer.kisanId && t.status !== 'Completed') || tokens.find(t => t.kisanId === farmer.kisanId))
+    : undefined;
 
   return (
     <div className={`min-h-screen bg-[#F4F7F5] dark:bg-[#071711] text-[#063B2A] dark:text-[#F0FAF5] flex flex-col transition-colors duration-200 ${outdoorMode ? 'outdoor-contrast-mode' : ''}`}>
@@ -563,7 +588,7 @@ export default function App() {
         onOpenFarmerLogin={() => setIsFarmerLoginModalOpen(true)}
         onOpenSupervisorLogin={() => setIsSupervisorModalOpen(true)}
         onOpenSuperAdminLogin={() => setIsSuperAdminModalOpen(true)}
-        farmerName={farmer.fullName}
+        farmerName={farmer ? farmer.fullName : undefined}
         currentRole={currentRole}
         onGoToLanding={() => setCurrentRole('landing')}
         onLogoutCurrentRole={() => {
@@ -582,10 +607,13 @@ export default function App() {
             onOpenSupervisorLogin={() => setIsSupervisorModalOpen(true)}
             onOpenSuperAdminLogin={() => setIsSuperAdminModalOpen(true)}
             onOpenDemoDrawer={() => setIsSihDemoOpen(true)}
+            onOpenRegistration={() => setIsFarmerRegistrationModalOpen(true)}
+            onOpenVoiceMitra={() => setIsVoiceMitraOpen(true)}
+            onLoginSuccess={handleFarmerLoginSuccess}
           />
         )}
 
-        {currentRole === 'farmer' && (
+        {currentRole === 'farmer' && farmer ? (
           <FarmerApp
             farmer={farmer}
             activeToken={activeToken}
@@ -605,7 +633,18 @@ export default function App() {
             onLanguageChange={setLanguage}
             onOpenLogin={() => setIsFarmerLoginModalOpen(true)}
           />
-        )}
+        ) : currentRole === 'farmer' ? (
+          <PublicLandingGate
+            language={language}
+            onOpenFarmerLogin={() => setIsFarmerLoginModalOpen(true)}
+            onOpenSupervisorLogin={() => setIsSupervisorModalOpen(true)}
+            onOpenSuperAdminLogin={() => setIsSuperAdminModalOpen(true)}
+            onOpenDemoDrawer={() => setIsSihDemoOpen(true)}
+            onOpenRegistration={() => setIsFarmerRegistrationModalOpen(true)}
+            onOpenVoiceMitra={() => setIsVoiceMitraOpen(true)}
+            onLoginSuccess={handleFarmerLoginSuccess}
+          />
+        ) : null}
 
         {currentRole === 'supervisor' && (
           <SupervisorConsole
@@ -619,6 +658,7 @@ export default function App() {
             fleet={fleet}
             onDispatchAsset={handleDispatchAsset}
             onRecallAsset={handleRecallAsset}
+            onBulkUpdateTokens={setTokens}
             language={language}
             onExit={handleSupervisorLogout}
             session={supervisorSession}
@@ -703,14 +743,60 @@ export default function App() {
         </footer>
       )}
 
-      {/* Farmer Multi-Method Authentication Modal (Aadhaar, Mobile, or Email) */}
+      {/* Farmer Multi-Method Authentication Modal (Aadhaar, Mobile, Email, or QR) */}
       <FarmerLoginModal
         isOpen={isFarmerLoginModalOpen}
         onClose={() => setIsFarmerLoginModalOpen(false)}
         onLoginSuccess={handleFarmerLoginSuccess}
         language={language}
         currentFarmer={farmer}
+        onOpenRegistration={() => {
+          setIsFarmerLoginModalOpen(false);
+          setIsFarmerRegistrationModalOpen(true);
+        }}
       />
+
+      {/* Farmer Self-Service Registration Modal (New Users) */}
+      <FarmerRegistrationModal
+        isOpen={isFarmerRegistrationModalOpen}
+        onClose={() => setIsFarmerRegistrationModalOpen(false)}
+        language={language}
+        onRegistrationSuccess={(newFarmer) => {
+          setIsFarmerRegistrationModalOpen(false);
+          handleFarmerLoginSuccess(newFarmer);
+        }}
+      />
+
+      {/* Universal Kisan Mitra Voice Assistant Modal (Visible & Accessible for everyone) */}
+      <KisanMitraVoiceModal
+        isOpen={isVoiceMitraOpen}
+        onClose={() => setIsVoiceMitraOpen(false)}
+        language={language}
+        activeToken={activeToken}
+        farmer={farmer || undefined}
+        recentProcurement={procurementRecords[0]}
+        recentDbt={dbtTransactions[0]}
+      />
+
+      {/* Floating Universal Voice Assistant Button (Always visible on all screens) */}
+      {!isVoiceMitraOpen && (
+        <div className="fixed bottom-20 sm:bottom-6 right-5 z-40">
+          <button
+            type="button"
+            onClick={() => setIsVoiceMitraOpen(true)}
+            title="Talk with Kisan Mitra (किसान मित्र आवाज)"
+            className="h-14 px-4 rounded-full bg-[#168A5B] hover:bg-[#12734C] text-white shadow-2xl flex items-center gap-2.5 transition-all active:scale-95 border-2 border-white dark:border-[#0E241C] ring-4 ring-[#168A5B]/20 cursor-pointer"
+          >
+            <div className="relative flex items-center">
+              <Volume2 className="w-5 h-5 text-amber-300" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-[#083324]" />
+            </div>
+            <span className="text-xs font-bold font-serif-display hidden sm:inline">
+              {language === 'hi' ? 'किसान मित्र आवाज' : 'Kisan Voice AI'}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Supervisor Secure Authentication Modal (Triggered by Ctrl+Shift+A or Operator Login) */}
       <SupervisorLoginModal
