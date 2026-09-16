@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sprout, 
   Globe, 
@@ -12,10 +12,13 @@ import {
   Eye,
   User,
   LogOut,
-  Home
+  Home,
+  Bell,
+  ChevronDown
 } from 'lucide-react';
 import { LanguageCode, AppRole } from '../types';
 import { getTranslations } from '../i18n';
+import { notificationService } from '../services/notificationService';
 
 interface AppHeaderProps {
   language: LanguageCode;
@@ -33,6 +36,7 @@ interface AppHeaderProps {
   currentRole?: AppRole;
   onGoToLanding?: () => void;
   onLogoutCurrentRole?: () => void;
+  onOpenNotifications?: () => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -50,38 +54,37 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   farmerName,
   currentRole = 'farmer',
   onGoToLanding,
-  onLogoutCurrentRole
+  onLogoutCurrentRole,
+  onOpenNotifications
 }) => {
+  const isHi = language === 'hi';
   const t = getTranslations(language);
+  const [unreadCount, setUnreadCount] = useState<number>(() => notificationService.getUnreadCount());
+
+  useEffect(() => {
+    const unsub = notificationService.subscribe(() => {
+      setUnreadCount(notificationService.getUnreadCount());
+    });
+    return unsub;
+  }, []);
 
   return (
-    <header className="sticky top-0 z-40 bg-white dark:bg-[#0E241C] border-b border-[#E2ECE6] dark:border-[#1D4334] shadow-[0_2px_12px_rgba(6,59,42,0.03)] dark:shadow-[0_2px_16px_rgba(0,0,0,0.4)] transition-colors w-full">
-      {/* Official National Agriculture Portal Header Strip */}
-      <div className="bg-[#063B2A] dark:bg-[#081B13] text-[#DDF4E9] text-[11px] font-medium px-4 sm:px-6 py-1.5 border-b border-[#0B5D3B] dark:border-[#153A2C] w-full">
+    <header className="sticky top-0 z-40 bg-[#062B1E] dark:bg-[#051F15] text-white border-b border-[#0D4430] shadow-md transition-colors w-full">
+      {/* Universal Government Top Strip */}
+      <div className="bg-[#042016] text-[#A7D7C1] text-[11px] font-medium px-4 sm:px-6 py-1 border-b border-[#0A3825] w-full">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 font-semibold tracking-wide text-[#ECF8F2]">
-              <span className="w-2 h-2 rounded-full bg-[#22A872] animate-soft-pulse"></span>
-              <span>{t.govtMinistry}</span>
+            <span className="inline-flex items-center gap-1.5 font-semibold text-[#DDF4E9]">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>{isHi ? 'कृषि एवं किसान कल्याण मंत्रालय • भारत सरकार' : 'Ministry of Agriculture & Farmers Welfare • Govt of India'}</span>
             </span>
-            <span className="hidden sm:inline text-white/30">|</span>
-            <span className="hidden md:inline text-white/80">
-              {t.mandiLocation}
+            <span className="hidden sm:inline text-white/20">|</span>
+            <span className="hidden md:inline text-white/70">
+              {isHi ? 'राष्ट्रीय ई-मंडी उपार्जन नेटवर्क' : 'National e-Mandi Procurement Network'}
             </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 text-[11px]">
-            {/* Toll-Free Kisan Helpline */}
-            <a 
-              href="tel:18001801551" 
-              title={t.tollFreeLabel} 
-              className="flex items-center gap-1.5 text-amber-300 hover:text-amber-200 transition-colors font-medium px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/30"
-            >
-              <PhoneCall className="w-3 h-3 text-amber-400" />
-              <span className="font-mono">{t.tollFree}</span>
-              <span className="hidden sm:inline text-[10px] opacity-80">(Toll-Free)</span>
-            </a>
-
+          <div className="flex items-center gap-3 text-[11px]">
             {/* Offline Resilience Indicator */}
             <button
               onClick={onToggleOffline}
@@ -93,111 +96,124 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               }`}
             >
               {isOffline ? <WifiOff className="w-3 h-3 text-black" /> : <Wifi className="w-3 h-3 text-emerald-400" />}
-              <span className="hidden xs:inline">{isOffline ? t.offlineCached : t.onlineSync}</span>
+              <span className="hidden sm:inline">{isOffline ? t.offlineCached : t.onlineSync}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Brand, Identity & Universal Citizen Controls */}
+      {/* Main Smart Mandi Brand & Universal Farmer Bar (Directly matching design reference) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-4 w-full">
-        {/* Brand identity - Clickable to return to Portal Gateway if onGoToLanding provided */}
+        
+        {/* Left Brand Identity: Golden Sprout + Smart Mandi + किसान सेवा पोर्टल */}
         <div 
           onClick={onGoToLanding}
           className={`flex items-center gap-3 ${onGoToLanding ? 'cursor-pointer group' : ''}`}
           role={onGoToLanding ? 'button' : undefined}
           title={onGoToLanding ? t.returnToPortalGateway : undefined}
         >
-          <div className="w-10 h-10 rounded-xl bg-[#063B2A] dark:bg-[#143026] flex items-center justify-center text-white shadow-sm border border-[#168A5B]/40 flex-shrink-0 group-hover:scale-105 transition-transform">
-            <Sprout className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" />
+          {/* Circular Golden Sprout Badge */}
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#0D4A34] flex items-center justify-center text-amber-400 shadow-sm border border-[#168A5B]/50 flex-shrink-0 group-hover:scale-105 transition-transform">
+            <Sprout className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
+
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base sm:text-lg font-bold font-serif-display text-[#063B2A] dark:text-[#F0FAF5] tracking-tight">
-                {t.brandName}
+            <div className="flex items-center gap-2">
+              <h1 className="text-base sm:text-xl font-bold font-serif-display text-white tracking-tight leading-tight">
+                Smart Mandi
               </h1>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#DDF4E9] dark:bg-[#153A2C] text-[#063B2A] dark:text-[#6EE7B7] border border-[#168A5B]/30 hidden sm:inline-block">
-                {currentRole === 'landing' ? t.portalGateway : currentRole === 'supervisor' ? t.roleSupervisorTitle : currentRole === 'superadmin' ? t.roleAdminTitle : t.roleFarmerTitle}
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#12533C] text-emerald-300 border border-[#168A5B]/40 hidden md:inline-block">
+                {currentRole === 'landing' ? (isHi ? 'पोर्टल प्रवेश' : 'Portal Gateway') : currentRole === 'supervisor' ? (isHi ? 'मंडी पर्यवेक्षक' : 'Supervisor') : currentRole === 'superadmin' ? (isHi ? 'राज्य प्रशासन' : 'Super Admin') : (isHi ? 'किसान पोर्टल' : 'Farmer Portal')}
               </span>
             </div>
-            <p className="text-[11px] text-[#2C5343] dark:text-[#85AFA0] hidden md:block">
-              {t.brandTagline}
+            <p className="text-[11px] font-medium text-amber-300/90 leading-tight">
+              {isHi ? 'किसान सेवा पोर्टल' : 'Farmer Service Portal'}
             </p>
           </div>
         </div>
 
-        {/* Global Controls: Theme Toggle, Sunlight/Outdoor Mode, Language Selector */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Back to Gateway Portal button if inside authenticated role */}
-          {currentRole !== 'landing' && onGoToLanding && (
-            <button
-              onClick={onGoToLanding}
-              title={t.gatewayHome}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-[#C7DCD1] dark:border-[#2B5E4A] bg-[#F4F7F5] dark:bg-[#143026] text-[#063B2A] dark:text-[#ECF8F2] hover:bg-white dark:hover:bg-[#1A3C2F] transition-all"
-            >
-              <Home className="w-3.5 h-3.5 text-[#168A5B]" />
-              <span className="hidden lg:inline">{t.portalGateway}</span>
-            </button>
-          )}
+        {/* Center Slogan Banner (As shown in screenshot) */}
+        <div className="hidden xl:flex items-center justify-center">
+          <div className="px-4 py-1.5 rounded-full bg-[#083827] border border-[#168A5B]/40 text-xs font-semibold text-emerald-200 tracking-wide flex items-center gap-2">
+            <span>🌱</span>
+            <span>{isHi ? 'किसान का भरोसा • डिजिटल मंडी • समृद्ध भारत' : 'Trust of Farmer • Digital Mandi • Prosperous India'}</span>
+          </div>
+        </div>
 
-          {/* Outdoor Sunlight Mode (High-contrast for bright outdoors) */}
-          <button
-            onClick={onToggleOutdoorMode}
-            title={outdoorMode ? t.outdoorModeActive : t.outdoorMode}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-              outdoorMode 
-                ? 'bg-amber-400 text-black border-black shadow-sm ring-2 ring-amber-500' 
-                : 'bg-[#F4F7F5] dark:bg-[#143026] text-[#063B2A] dark:text-[#ECF8F2] border-[#C7DCD1] dark:border-[#2B5E4A] hover:bg-white dark:hover:bg-[#1A3C2F]'
-            }`}
+        {/* Right Universal Actions: Toll-Free Pill, Notifications, Language, Profile */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          
+          {/* Toll-Free Support Pill (Directly from design reference) */}
+          <a 
+            href="tel:18001801551" 
+            title={isHi ? 'किसान टोल-फ्री हेल्पलाइन' : 'Kisan Toll-Free Helpline'} 
+            className="flex items-center gap-1.5 text-amber-300 hover:text-amber-200 transition-colors font-bold text-xs px-3 py-1.5 rounded-xl bg-amber-950/40 border border-amber-400/40 shadow-xs"
           >
-            <Eye className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-            <span className="hidden sm:inline">{t.outdoorMode}</span>
-          </button>
+            <PhoneCall className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
+            <span className="font-mono">1800-180-1551</span>
+            <span className="hidden sm:inline text-[10px] font-normal text-amber-200/80">({isHi ? 'टोल-फ्री' : 'Toll-Free'})</span>
+          </a>
 
-          {/* Theme Toggle (Light / Dark Mode) */}
+          {/* Notification Bell with Badge */}
           <button
-            onClick={onToggleTheme}
-            title={theme === 'dark' ? t.switchLightMode : t.switchDarkMode}
-            aria-label="Toggle visual theme"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-[#C7DCD1] dark:border-[#2B5E4A] bg-[#F4F7F5] dark:bg-[#143026] text-[#063B2A] dark:text-[#ECF8F2] hover:bg-white dark:hover:bg-[#1A3C2F] transition-all"
+            onClick={onOpenNotifications}
+            className="relative p-2 rounded-xl bg-[#083827] hover:bg-[#0C4E37] text-emerald-200 border border-[#168A5B]/40 transition-all cursor-pointer"
+            title={isHi ? 'सूचनाएं' : 'Notifications'}
           >
-            {theme === 'dark' ? (
-              <>
-                <Sun className="w-3.5 h-3.5 text-amber-300" />
-                <span className="hidden md:inline">{t.lightMode}</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-3.5 h-3.5 text-emerald-800 dark:text-emerald-400" />
-                <span className="hidden md:inline">{t.darkMode}</span>
-              </>
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white font-bold text-[10px] flex items-center justify-center px-1 border-2 border-[#062B1E]">
+                {unreadCount}
+              </span>
             )}
           </button>
 
-          {/* Multilingual Selector with Genuine State Change */}
+          {/* Multilingual Selector (Dropdown matching screenshot) */}
           <div className="relative flex items-center">
-            <Globe className="w-3.5 h-3.5 absolute left-2.5 text-[#0B5D3B] dark:text-[#6EE7B7] pointer-events-none" />
+            <Globe className="w-3.5 h-3.5 absolute left-2.5 text-emerald-400 pointer-events-none" />
             <select
               value={language}
               onChange={(e) => onLanguageChange(e.target.value as LanguageCode)}
-              aria-label={t.languageSelect}
-              className="pl-7 pr-3 py-1.5 text-xs font-semibold bg-[#F4F7F5] dark:bg-[#143026] hover:bg-white dark:hover:bg-[#1A3C2F] border border-[#C7DCD1] dark:border-[#2B5E4A] rounded-lg text-[#063B2A] dark:text-[#ECF8F2] focus:outline-none focus:ring-2 focus:ring-[#168A5B] cursor-pointer transition-colors"
+              aria-label="Language selector"
+              className="pl-7 pr-3 py-1.5 text-xs font-bold bg-[#083827] hover:bg-[#0C4E37] border border-[#168A5B]/40 rounded-xl text-emerald-200 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer transition-colors"
             >
-              <option value="hi" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">हिन्दी (Hindi)</option>
-              <option value="en" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">English</option>
-              <option value="mr" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">मराठी (Marathi)</option>
-              <option value="pa" className="bg-white dark:bg-[#0E241C] text-black dark:text-white">ਪੰਜਾਬੀ (Punjabi)</option>
+              <option value="hi" className="bg-[#062B1E] text-white">हिन्दी</option>
+              <option value="en" className="bg-[#062B1E] text-white">English</option>
+              <option value="mr" className="bg-[#062B1E] text-white">मराठी</option>
+              <option value="pa" className="bg-[#062B1E] text-white">ਪੰਜਾਬੀ</option>
             </select>
           </div>
 
-          {/* Citizen Farmer Login / Account Action */}
+          {/* Outdoor Sunlight Mode Toggle */}
+          <button
+            onClick={onToggleOutdoorMode}
+            title={outdoorMode ? t.outdoorModeActive : t.outdoorMode}
+            className={`p-2 rounded-xl text-xs font-semibold border transition-all hidden md:flex items-center justify-center ${
+              outdoorMode 
+                ? 'bg-amber-400 text-black border-black ring-2 ring-amber-500' 
+                : 'bg-[#083827] text-emerald-200 border-[#168A5B]/40 hover:bg-[#0C4E37]'
+            }`}
+          >
+            <Eye className="w-4 h-4 text-amber-400" />
+          </button>
+
+          {/* Theme Toggle */}
+          <button
+            onClick={onToggleTheme}
+            title={theme === 'dark' ? t.switchLightMode : t.switchDarkMode}
+            className="p-2 rounded-xl text-xs font-semibold bg-[#083827] hover:bg-[#0C4E37] text-emerald-200 border border-[#168A5B]/40 transition-all hidden md:flex items-center justify-center"
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-emerald-300" />}
+          </button>
+
+          {/* Role / Farmer Account Button */}
           {currentRole === 'landing' && onOpenFarmerLogin && (
             <button
               onClick={onOpenFarmerLogin}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#168A5B] hover:bg-[#0B5D3B] text-white transition-all shadow-xs cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#168A5B] hover:bg-[#1E9E6B] text-white transition-all shadow-sm cursor-pointer"
             >
-              <User className="w-3.5 h-3.5" />
-              <span>{t.kisanLogin}</span>
+              <User className="w-3.5 h-3.5 text-amber-300" />
+              <span>{isHi ? 'लॉगिन करें' : 'Sign In'}</span>
             </button>
           )}
 
@@ -205,27 +221,29 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <button
               onClick={onOpenFarmerLogin}
               title={farmerName ? `Signed in as ${farmerName}` : t.kisanLogin}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#E7F7EF] dark:bg-[#143026] text-[#0B5D3B] dark:text-[#6EE7B7] border border-[#98BFA9] dark:border-[#2B5E4A] hover:bg-[#D4EFE0] dark:hover:bg-[#1A3C2F] transition-all shadow-2xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#0D4A34] text-white border border-[#168A5B]/60 hover:bg-[#125A3F] transition-all shadow-xs"
             >
-              <User className="w-3.5 h-3.5 text-[#168A5B] flex-shrink-0" />
-              <span className="hidden sm:inline font-bold">
-                {farmerName ? farmerName.split(' ')[0] : t.kisanLogin}
+              <div className="w-5 h-5 rounded-full bg-emerald-500 text-black font-bold flex items-center justify-center text-[10px]">
+                {farmerName ? farmerName.charAt(0) : 'K'}
+              </div>
+              <span className="hidden sm:inline">
+                {farmerName ? farmerName.split(' ')[0] : (isHi ? 'किसान' : 'Farmer')}
               </span>
             </button>
           )}
 
-          {/* Exit / Logout for Authenticated Farmer, Operator or Super Admin */}
+          {/* Sign Out for Authenticated Roles */}
           {(currentRole === 'farmer' || currentRole === 'supervisor' || currentRole === 'superadmin') && onLogoutCurrentRole && (
             <button
               onClick={onLogoutCurrentRole}
-              title="Sign Out Session"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all cursor-pointer"
+              title={isHi ? 'लॉगआउट' : 'Sign Out'}
+              className="p-2 rounded-xl text-xs font-bold bg-red-950/50 hover:bg-red-900/60 text-red-300 border border-red-500/40 transition-all cursor-pointer"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline font-bold">{t.signOut}</span>
+              <LogOut className="w-4 h-4" />
             </button>
           )}
         </div>
+
       </div>
     </header>
   );

@@ -1,34 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  CheckCircle2, 
-  MapPin, 
-  Clock, 
+  Sprout,
+  UserCheck, 
   Ticket, 
-  Scale, 
-  Banknote, 
-  Bell, 
-  ArrowRight, 
+  MapPin, 
+  Truck, 
+  Wheat, 
+  TrendingUp, 
+  CheckCircle2, 
+  Clock, 
   Volume2, 
-  Building2, 
-  Sparkles, 
-  AlertTriangle, 
-  Calendar, 
-  ChevronRight, 
-  FileCheck,
+  ArrowRight, 
+  ArrowUpRight,
+  Sun,
   ShieldCheck,
-  Wheat,
-  CloudSun,
-  Navigation,
-  ExternalLink,
-  HelpCircle,
+  Building2,
+  FileText,
+  AlertCircle,
   QrCode,
-  Layers
+  Sparkles,
+  Zap,
+  Info
 } from 'lucide-react';
-import { FarmerProfile, AgriToken, LanguageCode, ServiceType, ProcurementRecord, DbtTransaction } from '../../types';
+import { 
+  FarmerProfile, 
+  AgriToken, 
+  LanguageCode, 
+  ServiceType, 
+  ProcurementRecord, 
+  DbtTransaction 
+} from '../../types';
 import { getTranslations } from '../../i18n';
-import { normalizeStatus, STATUS_DEFINITIONS } from '../../domain/statusModel';
 import { speakAnnouncement, playAudioChime } from '../../utils/speech';
-import { notificationService, AppNotification } from '../../services/notificationService';
+import { MandiProcurementYardIllustration } from '../common/AgriIllustrations';
 
 interface FarmerHomeViewProps {
   farmer: FarmerProfile;
@@ -39,6 +43,7 @@ interface FarmerHomeViewProps {
   onNavigateToTab: (tab: string) => void;
   onSelectServiceToBook: (service: ServiceType) => void;
   onOpenVoiceMitra: () => void;
+  onOpenGatePassQr?: () => void;
 }
 
 export const FarmerHomeView: React.FC<FarmerHomeViewProps> = ({
@@ -49,606 +54,484 @@ export const FarmerHomeView: React.FC<FarmerHomeViewProps> = ({
   language,
   onNavigateToTab,
   onSelectServiceToBook,
-  onOpenVoiceMitra
+  onOpenVoiceMitra,
+  onOpenGatePassQr
 }) => {
+  const isHi = language === 'hi';
   const t = getTranslations(language);
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => notificationService.getAll());
   const [isSpeakingAudio, setIsSpeakingAudio] = useState(false);
-  
-  useEffect(() => {
-    const unsub = notificationService.subscribe(updated => setNotifications(updated));
-    return unsub;
-  }, []);
 
-  const standardStatus = activeToken ? normalizeStatus(activeToken.status) : 'BOOKED';
-  const statusMeta = STATUS_DEFINITIONS[standardStatus];
-
-  // Derive crop & quantity values safely without fabricated defaults
+  // Derive crop display name
   const cropName = activeToken?.serviceDetails?.cropName 
-    ? (language === 'hi' && activeToken.serviceDetails.cropNameHi ? activeToken.serviceDetails.cropNameHi : activeToken.serviceDetails.cropName)
-    : (recentProcurement?.cropName 
-        ? (language === 'hi' && recentProcurement.cropNameHi ? recentProcurement.cropNameHi : recentProcurement.cropName)
-        : (language === 'hi' ? 'फसल अनिर्धारित' : 'Crop unassigned'));
-  
-  const bookedQuintals = activeToken?.serviceDetails?.approxQuintals;
-  const processedQuintals = (recentProcurement && typeof recentProcurement.netWeightQuintals === 'number') 
-    ? recentProcurement.netWeightQuintals 
-    : undefined;
-  const remainingQuintals = (typeof bookedQuintals === 'number' && typeof processedQuintals === 'number')
-    ? Math.max(0, bookedQuintals - (activeToken?.status === 'Completed' ? bookedQuintals : processedQuintals))
-    : (typeof bookedQuintals === 'number' && activeToken?.status === 'Completed' ? 0 : bookedQuintals);
+    ? (isHi && activeToken.serviceDetails.cropNameHi ? activeToken.serviceDetails.cropNameHi : activeToken.serviceDetails.cropName)
+    : (farmer.landParcels[0]?.primaryCropHi && isHi 
+        ? farmer.landParcels[0].primaryCropHi 
+        : (farmer.landParcels[0]?.primaryCrop || (isHi ? 'गेहूँ (शरबती)' : 'Wheat (Sharbati)')));
 
-  // Determine primary next action based on current state
-  const getNextAction = () => {
-    if (!activeToken) {
-      return {
-        label: t.bookNewSlotButton,
-        action: () => onNavigateToTab('booking'),
-        description: t.noActiveAppointmentDesc
-      };
-    }
-    if (activeToken.status === 'Completed') {
-      return {
-        label: t.actionTrackPayment,
-        action: () => onNavigateToTab('dbt'),
-        description: language === 'hi' ? 'तौल पर्ची व डीबीटी भुगतान सलाह जारी की जा चुकी है।' : 'Procurement completed. Track PFMS DBT credit status.'
-      };
-    }
-    if (activeToken.status === 'Weighbridge') {
-      return {
-        label: t.actionViewWeighment,
-        action: () => onNavigateToTab('procurement'),
-        description: language === 'hi' ? 'वाहन इलेक्ट्रॉनिक तौल कांटे पर उपस्थित है।' : 'Vehicle at weighbridge scale. Check gross & tare weight.'
-      };
-    }
-    if (activeToken.status === 'Called' || activeToken.status === 'At Counter') {
-      return {
-        label: `${t.actionReportCounter} ${activeToken.counterAssigned}`,
-        action: () => onNavigateToTab('queue'),
-        description: language === 'hi' ? `आपका टोकन काउंटर #${activeToken.counterAssigned} पर पुकारा गया है।` : `Your token has been called to Counter #${activeToken.counterAssigned}.`
-      };
-    }
-    if (activeToken.status === 'Waiting' && activeToken.peopleAhead <= 2) {
-      return {
-        label: t.actionProceedGate,
-        action: () => onNavigateToTab('queue'),
-        description: language === 'hi' ? 'आपकी बारी जल्द आने वाली है। गेट प्रवेश हेतु तैयार रहें।' : 'Your turn is approaching. Move toward Mandi gate inward.'
-      };
-    }
-    return {
-      label: t.actionViewPass,
-      action: () => onNavigateToTab('queue'),
-      description: language === 'hi' ? 'गेट सत्यापन हेतु डिजिटल ई-पास व बारकोड सुरक्षित रखें।' : 'Keep your digital e-pass ready for gate entry.'
-    };
-  };
-
-  const nextAction = getNextAction();
-
-  // Audio voiceover for pass details
-  const handleSpeakPass = () => {
-    if (!activeToken) return;
-    if (isSpeakingAudio) return;
-    playAudioChime();
+  // Voice announcement of the home dashboard status
+  const handleListenHomeSummary = () => {
     setIsSpeakingAudio(true);
-    const qtyTextHi = typeof bookedQuintals === 'number' ? `की पंजीकृत मात्रा ${bookedQuintals} क्विंटल है।` : 'का स्लॉट निर्धारित है।';
-    const qtyTextEn = typeof bookedQuintals === 'number' ? `, ${bookedQuintals} quintals` : '';
-    const hi = `नमस्ते ${farmer.fullNameHi}! आपका ई-पास टोकन नंबर ${activeToken.tokenNumber} है। उपार्जन केंद्र ${activeToken.centreNameHi || activeToken.centreName} में काउंटर नंबर ${activeToken.counterAssigned} निर्धारित है। आपकी फसल ${cropName} ${qtyTextHi} अनुमानित प्रतीक्षा समय लगभग ${activeToken.estimatedWaitMins} मिनट है।`;
-    const en = `Hello ${farmer.fullName}! Your token number is ${activeToken.tokenNumber} for ${cropName}${qtyTextEn} at ${activeToken.centreName}. Counter ${activeToken.counterAssigned} assigned. Estimated waiting time is approximately ${activeToken.estimatedWaitMins} minutes.`;
-    speakAnnouncement(language === 'hi' ? hi : en, language === 'hi' ? 'hi' : 'en').then(() => {
-      setIsSpeakingAudio(false);
-    });
+    playAudioChime();
+
+    const tokenText = activeToken 
+      ? `आपका वर्तमान टोकन क्रमांक ${activeToken.tokenNumber} है। अनुमानित प्रतीक्षा समय ${activeToken.estimatedWaitMins || 25} मिनट है।`
+      : 'आपका कोई आगामी टोकन सक्रिय नहीं है। आप नया टोकन बुक कर सकते हैं।';
+
+    const textHi = `नमस्कार ${farmer.fullNameHi || 'किसान भाई'}। स्मार्ट प्रोक्योरमेंट मंडी पोर्टल में आपका स्वागत है। आपकी पंजीकरण स्थिति सत्यापित है। ${tokenText} आज भोपाल मंडी में गेहूँ का भाव ₹2,450 प्रति क्विंटल है।`;
+    const textEn = `Welcome ${farmer.fullName || 'Farmer'} to Smart Mandi Procurement Portal. Your registration status is verified. ${activeToken ? `Your token number is ${activeToken.tokenNumber}.` : 'No active queue token.'} Today's wheat price is Rupees 2,450 per quintal.`;
+
+    speakAnnouncement(isHi ? textHi : textEn, isHi ? 'hi' : 'en');
+    setTimeout(() => setIsSpeakingAudio(false), 4000);
   };
 
-  // Determine active step index in procurement journey (0 to 4)
-  const getJourneyStepIndex = () => {
-    if (!activeToken) return 0;
-    if (activeToken.status === 'Completed' || recentDbt?.status === 'Credited') return 4;
-    if (activeToken.status === 'DBT Released' || recentProcurement) return 3;
-    if (activeToken.status === 'Weighbridge') return 2;
-    if (activeToken.status === 'Called' || activeToken.status === 'At Counter' || activeToken.status === 'Quality Check') return 1;
-    return 0;
-  };
+  // 5 Quick Services matching the exact design reference
+  const quickServices = [
+    {
+      id: 'registration',
+      titleHi: 'पंजीकरण करें',
+      titleEn: 'Register Land & Crop',
+      descHi: 'नई पंजीकरण के लिए ➔',
+      descEn: 'For new registration ➔',
+      icon: UserCheck,
+      bgColor: 'bg-[#EAF8F0] dark:bg-[#143026]',
+      borderColor: 'border-[#C2E8D2] dark:border-[#2B5E4A]',
+      iconColor: 'text-[#168A5B] dark:text-[#34D399]',
+      badgeColor: 'bg-[#168A5B] text-white',
+      tabTarget: 'registration'
+    },
+    {
+      id: 'queue',
+      titleHi: 'टोकन / कतार स्थिति',
+      titleEn: 'Token / Queue Status',
+      descHi: 'अपना टोकन देखें ➔',
+      descEn: 'View your token ➔',
+      icon: Ticket,
+      bgColor: 'bg-[#EBF5FF] dark:bg-[#13283E]',
+      borderColor: 'border-[#BFDBFE] dark:border-[#1E40AF]',
+      iconColor: 'text-[#2563EB] dark:text-[#60A5FA]',
+      badgeColor: 'bg-[#2563EB] text-white',
+      tabTarget: 'queue'
+    },
+    {
+      id: 'mandi',
+      titleHi: 'मंडी केंद्र खोजें',
+      titleEn: 'Find Mandi Centers',
+      descHi: 'नजदीकी केंद्र की जानकारी ➔',
+      descEn: 'Nearest centre info ➔',
+      icon: MapPin,
+      bgColor: 'bg-[#FEF9E8] dark:bg-[#342A12]',
+      borderColor: 'border-[#FDE68A] dark:border-[#B45309]',
+      iconColor: 'text-[#D97706] dark:text-[#FBBF24]',
+      badgeColor: 'bg-[#D97706] text-white',
+      tabTarget: 'mandi'
+    },
+    {
+      id: 'tracking',
+      titleHi: 'वाहन ट्रैकिंग',
+      titleEn: 'Vehicle Tracking',
+      descHi: 'अपना वाहन देखें ➔',
+      descEn: 'Track your vehicle ➔',
+      icon: Truck,
+      bgColor: 'bg-[#F4EFFE] dark:bg-[#2A1D44]',
+      borderColor: 'border-[#DDD6FE] dark:border-[#7C3AED]',
+      iconColor: 'text-[#7C3AED] dark:text-[#A78BFA]',
+      badgeColor: 'bg-[#7C3AED] text-white',
+      tabTarget: 'tracking'
+    },
+    {
+      id: 'prices',
+      titleHi: 'फसल व मूल्य जानकारी',
+      titleEn: 'Crop & Price Info',
+      descHi: 'आज का भाव देखें ➔',
+      descEn: 'View today rates ➔',
+      icon: Wheat,
+      bgColor: 'bg-[#E8FAF6] dark:bg-[#0E332A]',
+      borderColor: 'border-[#A7F3D0] dark:border-[#059669]',
+      iconColor: 'text-[#0D9488] dark:text-[#2DD4BF]',
+      badgeColor: 'bg-[#0D9488] text-white',
+      tabTarget: 'prices'
+    }
+  ];
 
-  const currentStepIdx = getJourneyStepIndex();
-
-  const journeySteps = [
-    { title: t.stepGate, desc: language === 'hi' ? 'गेट प्रवेश व ANPR वाहन आगमन' : 'Gate Inward & ANPR Entry' },
-    { title: t.stepCounter, desc: language === 'hi' ? 'दस्तावेज़ व 7/12 खतौनी जांच' : '7/12 & Doc Verification' },
-    { title: t.stepWeighbridge, desc: language === 'hi' ? 'इलेक्ट्रॉनिक तौल (IS 9281)' : 'Gross & Tare Weighment' },
-    { title: t.stepQuality, desc: language === 'hi' ? 'नमी व FAQ ग्रेड निर्धारण' : 'Moisture & Grading' },
-    { title: t.stepPayment, desc: language === 'hi' ? 'PFMS बैंक सीधा अंतरण' : 'Direct Benefit Transfer' }
+  // Daily MSP & Mandi Rates matching the screenshot
+  const liveMandiBhav = [
+    { cropHi: 'गेहूँ', cropEn: 'Wheat', price: '2,450', change: '+2.1%', icon: '🌾' },
+    { cropHi: 'चना', cropEn: 'Gram', price: '5,200', change: '+1.3%', icon: '🌰' },
+    { cropHi: 'सोयाबीन', cropEn: 'Soybean', price: '4,800', change: '+0.8%', icon: '🌽' },
+    { cropHi: 'मक्का', cropEn: 'Maize', price: '1,950', change: '+1.5%', icon: '🌽' },
+    { cropHi: 'धान', cropEn: 'Paddy', price: '2,300', change: '+1.2%', icon: '🌾' }
   ];
 
   return (
-    <div className="space-y-6 w-full max-w-5xl mx-auto pb-10">
-      {/* 
-        PRIORITY 1-7 & 11: 
-        PRIMARY HERO OPERATIONAL CARD (Current Booking, Queue Position, Arrival Times, Quantities & Next Action)
-        Clean, bright, light-first surface: Warm white / light sage
-      */}
-      <section className="bg-white dark:bg-[#0E241C] rounded-2xl border border-[#DCE7E1] dark:border-[#1D4334] shadow-[0_2px_12px_rgba(8,51,36,0.06)] overflow-hidden transition-colors">
-        {/* Card Header: Token Number, Kendra Name & Status Badge */}
-        <div className="bg-[#F5F8F6] dark:bg-[#143026] px-5 sm:px-6 py-4 border-b border-[#DCE7E1] dark:border-[#1D4334] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="w-10 h-10 rounded-xl bg-[#E7F7EF] dark:bg-[#153A2C] border border-[#98BFA9] flex items-center justify-center text-[#0B5D3B] dark:text-[#6EE7B7]">
-              <Ticket className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold font-serif-display text-[#083324] dark:text-[#F0FAF5]">
-                  {t.todayAppointmentTitle}
-                </span>
-                {activeToken && (
-                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-[#E7F7EF] text-[#0B5D3B] border border-[#98BFA9]">
-                    {activeToken.tokenNumber}
-                  </span>
-                )}
+    <div className="space-y-6 sm:space-y-7 animate-fade-in text-[#083324] dark:text-[#F0FAF5] max-w-7xl mx-auto">
+      
+      {/* 1. HERO SECTION (Faithful to design reference image) */}
+      <section className="bg-white dark:bg-[#0E241C] rounded-2xl sm:rounded-3xl border border-[#DCE7E1] dark:border-[#1D4334] p-5 sm:p-7 shadow-[0_2px_12px_rgba(6,59,42,0.04)] dark:shadow-[0_2px_20px_rgba(0,0,0,0.4)] relative overflow-hidden transition-colors">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+          
+          {/* Left Welcome Text & Dynamic Info Pills */}
+          <div className="flex-1 space-y-4 max-w-xl">
+            {/* Top Row: Sprout Emblem + Greeting */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-[#168A5B] flex items-center justify-center text-amber-300 shadow-sm flex-shrink-0">
+                <Sprout className="w-6 h-6" />
               </div>
-              <p className="text-xs text-[#4A6E5E] dark:text-[#85AFA0] mt-0.5 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-[#168A5B]" />
-                <span>{activeToken?.centreName || 'Wardha Model APMC Mandi Yard'} (CEN-1)</span>
-              </p>
+              <div>
+                <span className="text-[11px] font-bold text-[#168A5B] dark:text-[#6EE7B7] uppercase tracking-wider block">
+                  {isHi ? 'राष्ट्रीय उपार्जन पोर्टल' : 'National Procurement Portal'}
+                </span>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-[#062B1E] dark:text-[#F0FAF5] font-serif-display">
+                  {isHi 
+                    ? `नमस्कार, ${farmer.fullNameHi ? farmer.fullNameHi.split(' ')[0] : 'किसान भाई'} ! 👋` 
+                    : `Welcome, ${farmer.fullName ? farmer.fullName.split(' ')[0] : 'Farmer'} ! 👋`}
+                </h1>
+              </div>
+            </div>
+
+            {/* Description Subtext */}
+            <p className="text-xs sm:text-sm text-[#3E6554] dark:text-[#BBDCD0] leading-relaxed">
+              {isHi 
+                ? 'आपका स्मार्ट प्रोक्योरमेंट (मंडी) पोर्टल में स्वागत है। यहाँ आप अपनी पंजीकरण, टोकन स्थिति, मंडी केंद्र, और कई अन्य सेवाओं का लाभ उठा सकते हैं।' 
+                : 'Welcome to the Smart Procurement (Mandi) Portal. Manage your registration, check live queue token status, locate procurement centers, and access fair MSP services.'}
+            </p>
+
+            {/* Live Weather & Mandi Location Widgets */}
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FEF9E8] dark:bg-[#2A2312] border border-[#FDE68A] dark:border-[#B45309] text-xs font-semibold text-[#854D0E] dark:text-[#FDE047]">
+                <Sun className="w-4 h-4 text-amber-500" />
+                <span>28°C • {isHi ? 'हल्का बादल' : 'Partly Cloudy'}</span>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EAF8F0] dark:bg-[#143026] border border-[#C2E8D2] dark:border-[#2B5E4A] text-xs font-semibold text-[#0B5D3B] dark:text-[#6EE7B7]">
+                <MapPin className="w-3.5 h-3.5 text-[#168A5B]" />
+                <span>{farmer.district || (isHi ? 'भोपाल' : 'Bhopal')}, {farmer.state || (isHi ? 'मध्य प्रदेश' : 'Madhya Pradesh')}</span>
+              </div>
+
+              {/* Voice Readout Button */}
+              <button
+                onClick={handleListenHomeSummary}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EBF5FF] dark:bg-[#13283E] border border-[#BFDBFE] dark:border-[#1E40AF] text-xs font-semibold text-[#1D4ED8] dark:text-[#93C5FD] hover:bg-blue-100 transition-colors cursor-pointer"
+                title={isHi ? 'आवाज में सुनें' : 'Listen Status'}
+              >
+                <Volume2 className={`w-3.5 h-3.5 ${isSpeakingAudio ? 'animate-pulse text-blue-600' : ''}`} />
+                <span>{isHi ? 'आवाज में सुनें' : 'Listen Audio'}</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            {activeToken && (
-              <button
-                type="button"
-                onClick={handleSpeakPass}
-                disabled={isSpeakingAudio}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#0E241C] text-[#083324] dark:text-[#F0FAF5] border border-[#DCE7E1] dark:border-[#1D4334] text-xs font-bold hover:bg-slate-100 transition-colors active:scale-95 shadow-xs"
-                title={t.listenAudio}
-              >
-                <Volume2 className={`w-3.5 h-3.5 ${isSpeakingAudio ? 'text-[#168A5B] animate-pulse' : 'text-[#0B5D3B]'}`} />
-                <span>{isSpeakingAudio ? (language === 'hi' ? 'सुनाया जा रहा है...' : 'Playing...') : t.listenAudio}</span>
-              </button>
-            )}
-
-            <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#E7F7EF] text-[#0B5D3B] border border-[#98BFA9]">
-              {language === 'hi' ? statusMeta.labelHi : statusMeta.labelEn}
-            </span>
+          {/* Right APMC Mandi Procurement Yard Illustration (Directly from design reference) */}
+          <div className="w-full lg:w-[420px] flex-shrink-0">
+            <MandiProcurementYardIllustration className="w-full h-auto drop-shadow-sm" />
           </div>
         </div>
-
-        {activeToken ? (
-          <div className="p-5 sm:p-6 space-y-6">
-            {/* 
-              PRIMARY METRICS (Priorities 2, 3, 4, 5):
-              Queue position, expected arrival time, reach-by deadline, remaining time
-            */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-              {/* Priority 2: Queue Position */}
-              <div className="p-3.5 rounded-xl bg-[#F5F8F6] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#1D4334] space-y-1">
-                <span className="text-[11px] font-bold text-[#4A6E5E] dark:text-[#85AFA0] uppercase tracking-wider block">
-                  {t.queuePositionLabel}
-                </span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl font-mono font-bold text-[#083324] dark:text-[#F0FAF5]">
-                    {activeToken.status === 'Called' ? (language === 'hi' ? 'सक्रिय' : 'Serving') : `#${activeToken.peopleAhead + 1}`}
-                  </span>
-                </div>
-                <span className="text-[11px] text-[#0B5D3B] dark:text-[#6EE7B7] font-semibold block">
-                  {activeToken.peopleAhead} {t.peopleAheadLabel}
-                </span>
-              </div>
-
-              {/* Priority 3: Expected Arrival Time */}
-              <div className="p-3.5 rounded-xl bg-[#F5F8F6] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#1D4334] space-y-1">
-                <span className="text-[11px] font-bold text-[#4A6E5E] dark:text-[#85AFA0] uppercase tracking-wider block">
-                  {t.expectedArrival}
-                </span>
-                <p className="text-lg font-mono font-bold text-[#083324] dark:text-[#F0FAF5]">
-                  10:30 AM
-                </p>
-                <span className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0] block">
-                  Slot: {activeToken.scheduledTime}
-                </span>
-              </div>
-
-              {/* Priority 4: Reach-by / Attendance Time */}
-              <div className="p-3.5 rounded-xl bg-[#FFFBEB] dark:bg-amber-950/20 border border-[#FDE68A] dark:border-amber-900/40 space-y-1">
-                <span className="text-[11px] font-bold text-[#92400E] dark:text-amber-300 uppercase tracking-wider block">
-                  {t.reachByDeadline}
-                </span>
-                <p className="text-lg font-mono font-bold text-[#92400E] dark:text-amber-200">
-                  10:15 AM
-                </p>
-                <span className="text-[10px] text-[#92400E] dark:text-amber-400 block font-medium">
-                  {language === 'hi' ? '15 मिनट गेट बफर सहित' : '15 min gate entry buffer'}
-                </span>
-              </div>
-
-              {/* Priority 5: Remaining Time */}
-              <div className="p-3.5 rounded-xl bg-[#F5F8F6] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#1D4334] space-y-1">
-                <span className="text-[11px] font-bold text-[#4A6E5E] dark:text-[#85AFA0] uppercase tracking-wider block">
-                  {t.remainingTime}
-                </span>
-                <p className="text-lg font-mono font-bold text-[#083324] dark:text-[#F0FAF5]">
-                  ~{activeToken.estimatedWaitMins} mins
-                </p>
-                <span className="text-[11px] text-[#0B5D3B] dark:text-[#6EE7B7] block font-medium">
-                  Counter #{activeToken.counterAssigned}
-                </span>
-              </div>
-            </div>
-
-            {/* 
-              COMMODITY & QUANTITIES (Priorities 6, 7):
-              Crop, booked quantity, processed quantity, remaining quantity
-            */}
-            <div className="p-4 rounded-xl bg-[#F5F8F6] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#1D4334] space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#DCE7E1] dark:border-[#1D4334] pb-2.5">
-                <div className="flex items-center gap-2">
-                  <Wheat className="w-4 h-4 text-[#168A5B]" />
-                  <span className="text-xs font-bold text-[#083324] dark:text-[#F0FAF5]">
-                    {t.cropLabel}: <strong>{cropName}</strong>
-                  </span>
-                </div>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-white dark:bg-[#0E241C] text-[#0B5D3B] dark:text-[#6EE7B7] border border-[#DCE7E1] dark:border-[#1D4334] self-start sm:self-auto">
-                  {recentProcurement && typeof recentProcurement.mspPerQuintal === 'number'
-                    ? `Statutory MSP: ₹${recentProcurement.mspPerQuintal.toLocaleString('en-IN')} / ${language === 'hi' ? 'क्विंटल' : 'Quintal'} (${recentProcurement.qualityGrade || 'Grade FAQ'})`
-                    : (language === 'hi' ? 'एमएसपी दर: गुणवत्ता ग्रेडिंग उपरांत' : 'Statutory MSP: Subject to Grade Certification')}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center sm:text-left">
-                <div>
-                  <span className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0] block font-medium">
-                    {t.bookedQuantityLabel}
-                  </span>
-                  <span className="text-base sm:text-lg font-mono font-bold text-[#083324] dark:text-[#F0FAF5]">
-                    {typeof bookedQuintals === 'number' ? `${bookedQuintals} Qtl` : '—'}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0] block font-medium">
-                    {language === 'hi' ? 'तौल हो चुकी मात्रा' : 'Processed'}
-                  </span>
-                  <span className="text-base sm:text-lg font-mono font-bold text-[#0B5D3B] dark:text-[#6EE7B7]">
-                    {typeof processedQuintals === 'number' ? `${processedQuintals} Qtl` : (language === 'hi' ? 'प्रतीक्षारत' : 'Pending')}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0] block font-medium">
-                    {t.remainingQuantityLabel}
-                  </span>
-                  <span className="text-base sm:text-lg font-mono font-bold text-[#083324] dark:text-[#F0FAF5]">
-                    {typeof remainingQuintals === 'number' ? `${remainingQuintals} Qtl` : '—'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* 
-              PRIORITY 11: DOMINANT NEXT ACTION CALLOUT
-              Restrained agricultural green button with clear instruction
-            */}
-            <div className="p-4 rounded-xl bg-[#E7F7EF] dark:bg-[#153A2C] border border-[#98BFA9] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-[#0B5D3B] dark:text-[#6EE7B7] block">
-                  {t.primaryNextAction}
-                </span>
-                <p className="text-xs font-semibold text-[#083324] dark:text-[#F0FAF5]">
-                  {nextAction.description}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={nextAction.action}
-                  className="px-5 py-2.5 rounded-xl bg-[#168A5B] hover:bg-[#12734C] text-white text-xs font-bold flex items-center gap-2 transition-all shadow-sm active:scale-95"
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>{nextAction.label}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onNavigateToTab('queue')}
-                  className="px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#0E241C] hover:bg-slate-100 text-[#083324] dark:text-[#F0FAF5] text-xs font-semibold border border-[#DCE7E1] dark:border-[#1D4334] transition-colors"
-                >
-                  {language === 'hi' ? 'ई-पास देखें' : 'View Pass'}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="p-8 text-center space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#E7F7EF] text-[#168A5B] flex items-center justify-center mx-auto">
-              <Calendar className="w-6 h-6" />
-            </div>
-            <div className="max-w-md mx-auto space-y-1">
-              <h3 className="font-bold text-base text-[#083324] dark:text-[#F0FAF5]">
-                {t.noActiveAppointment}
-              </h3>
-              <p className="text-xs text-[#4A6E5E] dark:text-[#85AFA0] leading-relaxed">
-                {t.noActiveAppointmentDesc}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigateToTab('booking')}
-              className="px-5 py-2.5 rounded-xl bg-[#168A5B] hover:bg-[#12734C] text-white text-xs font-bold inline-flex items-center gap-2 transition-all shadow-sm active:scale-95"
-            >
-              <Calendar className="w-4 h-4" />
-              <span>{t.bookNewSlotButton}</span>
-            </button>
-          </div>
-        )}
       </section>
 
-      {/* 
-        PRIORITY 8: PROCUREMENT PROGRESS (5-Stage Visual Progression)
-      */}
-      <section className="bg-white dark:bg-[#0E241C] rounded-2xl border border-[#DCE7E1] dark:border-[#1D4334] p-5 sm:p-6 shadow-sm space-y-4 transition-colors">
-        <div className="flex items-center justify-between border-b border-[#DCE7E1] dark:border-[#1D4334] pb-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#083324] dark:text-[#F0FAF5] flex items-center gap-2">
-            <Scale className="w-4 h-4 text-[#168A5B]" />
-            <span>{t.journeyTitle}</span>
-          </h3>
-          <span className="text-[11px] font-bold text-[#0B5D3B] dark:text-[#6EE7B7] bg-[#E7F7EF] dark:bg-[#153A2C] px-2.5 py-0.5 rounded-full border border-[#98BFA9]">
-            Stage {currentStepIdx + 1} of 5 Active
-          </span>
+      {/* 2. त्वरित सेवाएँ (QUICK SERVICES - 5 CARDS) */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="p-1 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+              <Zap className="w-4 h-4" />
+            </span>
+            <h2 className="text-base sm:text-lg font-bold text-[#062B1E] dark:text-[#F0FAF5] font-serif-display">
+              {isHi ? 'त्वरित सेवाएँ' : 'Quick Services'}
+            </h2>
+          </div>
+
+          <button
+            onClick={() => onNavigateToTab('booking')}
+            className="text-xs font-bold text-[#168A5B] dark:text-[#6EE7B7] hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <span>{isHi ? 'सभी सेवाएँ देखें' : 'View All Services'}</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
-          {journeySteps.map((step, idx) => {
-            const isCompleted = idx < currentStepIdx;
-            const isCurrent = idx === currentStepIdx;
-            const isPending = idx > currentStepIdx;
-
+        {/* 5 Distinct Pastel Action Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          {quickServices.map((srv) => {
+            const Icon = srv.icon;
             return (
-              <div 
-                key={step.title}
-                className={`p-3 rounded-xl border transition-all ${
-                  isCurrent 
-                    ? 'bg-[#E7F7EF] dark:bg-[#153A2C] border-[#168A5B] shadow-xs' 
-                    : isCompleted 
-                    ? 'bg-[#F5F8F6] dark:bg-[#143026] border-[#DCE7E1] dark:border-[#1D4334]' 
-                    : 'bg-white dark:bg-[#0E241C] border-dashed border-[#DCE7E1] dark:border-[#1D4334] opacity-75'
-                }`}
+              <div
+                key={srv.id}
+                onClick={() => onNavigateToTab(srv.tabTarget)}
+                className={`p-4 rounded-2xl border ${srv.bgColor} ${srv.borderColor} hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer flex flex-col justify-between min-h-[128px]`}
               >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    isCompleted 
-                      ? 'bg-[#168A5B] text-white' 
-                      : isCurrent 
-                      ? 'bg-[#083324] text-white ring-2 ring-[#168A5B]' 
-                      : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                <div>
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#0E241C] shadow-xs flex items-center justify-center mb-3">
+                    <Icon className={`w-5 h-5 ${srv.iconColor}`} />
                   </div>
-                  <span className={`text-xs font-bold truncate ${
-                    isCurrent ? 'text-[#083324] dark:text-[#F0FAF5]' : 'text-[#4A6E5E] dark:text-[#85AFA0]'
-                  }`}>
-                    {step.title}
-                  </span>
+                  <h3 className="text-sm font-bold text-[#062B1E] dark:text-[#F0FAF5]">
+                    {isHi ? srv.titleHi : srv.titleEn}
+                  </h3>
                 </div>
-                <p className="text-[10px] text-[#4A6E5E] dark:text-[#85AFA0] leading-snug">
-                  {step.desc}
-                </p>
+
+                <div className="mt-3 flex items-center justify-between text-xs font-semibold text-[#0B5D3B] dark:text-[#6EE7B7]">
+                  <span>{isHi ? srv.descHi : srv.descEn}</span>
+                </div>
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* 
-        PRIORITY 9: PAYMENT STATUS & ADVICE SUMMARY
-      */}
-      <section className="bg-white dark:bg-[#0E241C] rounded-2xl border border-[#DCE7E1] dark:border-[#1D4334] p-5 sm:p-6 shadow-sm space-y-4 transition-colors">
-        <div className="flex items-center justify-between border-b border-[#DCE7E1] dark:border-[#1D4334] pb-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#083324] dark:text-[#F0FAF5] flex items-center gap-2">
-            <Banknote className="w-4 h-4 text-[#168A5B]" />
-            <span>{t.dbtTitle}</span>
-          </h3>
-          <button
-            type="button"
-            onClick={() => onNavigateToTab('dbt')}
-            className="text-xs text-[#168A5B] font-bold hover:underline flex items-center gap-1"
-          >
-            <span>{language === 'hi' ? 'पासबुक देखें' : 'View Passbook'}</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          <div className="p-3.5 rounded-xl bg-[#F5F8F6] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#1D4334] space-y-1">
-            <span className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0] block font-medium">
-              {language === 'hi' ? 'कुल देय सरकारी राशि' : 'Net MSP Gross Amount'}
-            </span>
-            {(() => {
-              if (!recentProcurement) {
-                return (
-                  <>
-                    <p className="text-base sm:text-lg font-bold text-[#4A6E5E] dark:text-[#85AFA0]">
-                      {language === 'hi' ? 'भुगतान प्रतीक्षारत' : 'Payment pending'}
-                    </p>
-                    <span className="text-[10px] text-[#4A6E5E] dark:text-[#85AFA0] block">
-                      {language === 'hi' ? 'तौल व गुणवत्ता ग्रेडिंग उपरांत उपलब्ध' : 'Available upon weighbridge weighment & grading'}
-                    </span>
-                  </>
-                );
-              }
-
-              const grossPayable = recentProcurement.totalGrossPayable;
-
-              if (grossPayable === undefined || grossPayable === null || isNaN(grossPayable)) {
-                return (
-                  <>
-                    <p className="text-base sm:text-lg font-bold text-[#4A6E5E] dark:text-[#85AFA0]">
-                      {language === 'hi' ? 'राशि अभी उपलब्ध नहीं' : 'Not yet available'}
-                    </p>
-                    <span className="text-[10px] text-[#4A6E5E] dark:text-[#85AFA0] block">
-                      {language === 'hi' ? `तौल पर्ची #${recentProcurement.slipNumber} • दर सत्यापन जारी` : `Slip #${recentProcurement.slipNumber} • Rate verification pending`}
-                    </span>
-                  </>
-                );
-              }
-
-              const isZero = grossPayable === 0;
-              return (
-                <>
-                  <p className="text-xl font-mono font-bold text-[#083324] dark:text-[#F0FAF5]">
-                    ₹{isZero ? '0' : Math.round(grossPayable).toLocaleString('en-IN')}
-                  </p>
-                  <span className="text-[10px] text-[#0B5D3B] dark:text-[#6EE7B7] block font-semibold">
-                    {typeof recentProcurement.netWeightQuintals === 'number' && typeof recentProcurement.mspPerQuintal === 'number'
-                      ? `${recentProcurement.netWeightQuintals} ${language === 'hi' ? 'क्विंटल' : 'Quintals'} × ₹${recentProcurement.mspPerQuintal.toLocaleString('en-IN')} MSP`
-                      : `Slip #${recentProcurement.slipNumber}`}
-                  </span>
-                </>
-              );
-            })()}
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-[#F5F8F6] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#1D4334] space-y-1">
-            <span className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0] block font-medium">
-              {t.bankAccount}
-            </span>
-            <p className="text-sm font-mono font-bold text-[#083324] dark:text-[#F0FAF5]">
-              {farmer.bankName || 'Aadhaar Seeded Bank'} • {farmer.bankAccount}
-            </p>
-            <span className="text-[10px] text-[#4A6E5E] dark:text-[#85AFA0] block">
-              {t.npciNotice}
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-[#F5F8F6] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#1D4334] space-y-1">
-            <span className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0] block font-medium">
-              {language === 'hi' ? 'डीबीटी अंतरण स्थिति' : 'Disbursement Status'}
-            </span>
-            <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-bold ${
-              recentDbt?.status === 'Credited'
-                ? 'bg-[#E7F7EF] text-[#0B5D3B] border border-[#98BFA9]'
-                : recentDbt?.status === 'Processing'
-                ? 'bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-300'
-                : 'bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300'
-            }`}>
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>
-                {recentDbt?.status === 'Credited' 
-                  ? t.statusCredited 
-                  : recentDbt?.status === 'Processing' 
-                  ? t.statusProcessing 
-                  : recentProcurement?.dbtStatus 
-                  ? recentProcurement.dbtStatus 
-                  : (language === 'hi' ? 'प्रतीक्षारत' : 'Pending')}
-              </span>
-            </div>
-            <p className="text-[10px] text-[#4A6E5E] dark:text-[#85AFA0] font-mono mt-1">
-              {recentDbt?.utrNumber 
-                ? `UTR: ${recentDbt.utrNumber}` 
-                : recentProcurement?.utrNumber 
-                ? `Ref: ${recentProcurement.utrNumber}` 
-                : (language === 'hi' ? 'यूटीआर नंबर अंतरण पश्चात जारी होगा' : 'UTR assigned post clearing')}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 
-        PRIORITY 10: NOTIFICATIONS & ALERTS
-      */}
-      <section className="bg-white dark:bg-[#0E241C] rounded-2xl border border-[#DCE7E1] dark:border-[#1D4334] p-5 sm:p-6 shadow-sm space-y-3 transition-colors">
-        <div className="flex items-center justify-between border-b border-[#DCE7E1] dark:border-[#1D4334] pb-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#083324] dark:text-[#F0FAF5] flex items-center gap-2">
-            <Bell className="w-4 h-4 text-[#168A5B]" />
-            <span>{t.navNotifications}</span>
-          </h3>
-          <button
-            type="button"
-            onClick={() => onNavigateToTab('notifications')}
-            className="text-xs text-[#168A5B] font-bold hover:underline flex items-center gap-1"
-          >
-            <span>{language === 'hi' ? 'सभी देखें' : 'View All'} ({notifications.length})</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="space-y-2.5">
-          {notifications.slice(0, 2).map((notif) => (
-            <div 
-              key={notif.id}
-              className="p-3 rounded-xl bg-[#F5F8F6] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#1D4334] flex items-start justify-between gap-3"
-            >
-              <div className="space-y-0.5">
-                <span className="text-xs font-bold text-[#083324] dark:text-[#F0FAF5] block">
-                  {language === 'hi' ? notif.titleHi : notif.title}
+      {/* 3. THREE-COLUMN REAL-TIME INFORMATION PANELS (As shown in screenshot) */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        
+        {/* PANEL 1: मेरी पंजीकरण स्थिति (My Registration Status) */}
+        <div className="bg-white dark:bg-[#0E241C] rounded-2xl border border-[#DCE7E1] dark:border-[#1D4334] p-5 shadow-xs flex flex-col justify-between space-y-4">
+          <div>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#EAF2ED] dark:border-[#1D4334] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-[#EAF8F0] dark:bg-[#143026] text-[#168A5B]">
+                  <FileText className="w-4 h-4" />
                 </span>
-                <p className="text-xs text-[#4A6E5E] dark:text-[#85AFA0] leading-snug">
-                  {language === 'hi' ? notif.bodyHi : notif.body}
-                </p>
-                <span className="text-[10px] text-slate-400 font-mono block">
-                  {notif.timestamp}
+                <h3 className="text-sm font-bold text-[#062B1E] dark:text-[#F0FAF5]">
+                  {isHi ? 'मेरी पंजीकरण स्थिति' : 'My Registration Status'}
+                </h3>
+              </div>
+              <button
+                onClick={() => onNavigateToTab('registration')}
+                className="text-xs font-semibold text-[#168A5B] dark:text-[#6EE7B7] hover:underline flex items-center gap-0.5"
+              >
+                <span>{isHi ? 'देखें सभी' : 'View all'}</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Profile & Crop Key Attributes */}
+            <div className="space-y-3 pt-3 text-xs">
+              <div className="flex items-center justify-between py-1 border-b border-[#F4F7F5] dark:border-[#153A2C]">
+                <span className="text-[#4A6E5E] dark:text-[#85AFA0]">
+                  {isHi ? 'किसान का नाम:' : 'Farmer Name:'}
+                </span>
+                <span className="font-bold text-[#062B1E] dark:text-[#F0FAF5]">
+                  {isHi ? (farmer.fullNameHi || 'रामलाल यादव') : (farmer.fullName || 'Ramlal Yadav')}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-1 border-b border-[#F4F7F5] dark:border-[#153A2C]">
+                <span className="text-[#4A6E5E] dark:text-[#85AFA0]">
+                  {isHi ? 'किसान ID:' : 'Kisan ID:'}
+                </span>
+                <span className="font-mono font-bold text-[#083324] dark:text-[#F0FAF5]">
+                  {farmer.kisanId || 'MP-4587-2025'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-1 border-b border-[#F4F7F5] dark:border-[#153A2C]">
+                <span className="text-[#4A6E5E] dark:text-[#85AFA0]">
+                  {isHi ? 'पंजीकृत फसल:' : 'Registered Crop:'}
+                </span>
+                <span className="font-bold text-[#0B5D3B] dark:text-[#6EE7B7]">
+                  {cropName}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-1">
+                <span className="text-[#4A6E5E] dark:text-[#85AFA0]">
+                  {isHi ? 'पंजीकरण स्थिति:' : 'Status:'}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E7F7EF] dark:bg-[#143026] text-[#0B5D3B] dark:text-[#6EE7B7] font-bold text-[11px] border border-[#98BFA9] dark:border-[#2B5E4A]">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#168A5B]" />
+                  <span>{isHi ? 'सत्यापित' : 'Verified'}</span>
                 </span>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
 
-      {/* 
-        FARMER IDENTITY, LAND QUOTA & WEATHER ADVISORY STRIP
-      */}
-      <section className="bg-white dark:bg-[#0E241C] rounded-2xl p-5 border border-[#DCE7E1] dark:border-[#1D4334] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#E7F7EF] text-[#0B5D3B] border border-[#98BFA9]">
-              {t.kisanId}: {farmer.kisanId}
+          {/* Bottom Card Summary */}
+          <div className="p-3 rounded-xl bg-[#F4F7F5] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#2B5E4A] flex items-center justify-between text-[11px]">
+            <span className="text-[#4A6E5E] dark:text-[#85AFA0]">
+              {isHi ? 'भूमि रकबा: 3.5 एकड़' : 'Land Area: 3.5 Acres'}
             </span>
-            <span className="text-xs text-[#0B5D3B] font-medium flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" />
-              <span>{t.ekycVerified}</span>
+            <span className="font-semibold text-[#0B5D3B] dark:text-[#6EE7B7] flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              {isHi ? 'पीएम-किसान पात्र' : 'PM-Kisan Active'}
             </span>
           </div>
-          <h4 className="text-base font-bold font-serif-display text-[#083324] dark:text-[#F0FAF5]">
-            {t.greeting} {language === 'hi' ? farmer.fullNameHi : farmer.fullName}
-          </h4>
-          <p className="text-xs text-[#4A6E5E] dark:text-[#85AFA0] mt-0.5 flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-[#168A5B]" />
-            <span>{farmer.village}, Taluka Wardha • {farmer.landParcels.reduce((acc, p) => acc + p.areaAcres, 0)} {t.farmlandTotal}</span>
-          </p>
         </div>
 
-        <div className="flex items-center gap-3 bg-[#F5F8F6] dark:bg-[#143026] px-3.5 py-2.5 rounded-xl border border-[#DCE7E1] dark:border-[#1D4334]">
-          <CloudSun className="w-6 h-6 text-amber-600 flex-shrink-0" />
-          <div className="text-xs">
-            <span className="font-bold text-[#083324] dark:text-[#F0FAF5] block">28°C Wardha APMC</span>
-            <span className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0]">{t.weatherAdvisory}</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Kisan Mitra Quick Assistant Banner */}
-      <div className="p-4 rounded-2xl bg-[#E7F7EF] dark:bg-[#153A2C] border border-[#98BFA9] flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#168A5B] text-white flex items-center justify-center">
-            <Sparkles className="w-4 h-4" />
-          </div>
+        {/* PANEL 2: आज का मंडी भाव (Today's Mandi MSP / Rates) */}
+        <div className="bg-white dark:bg-[#0E241C] rounded-2xl border border-[#DCE7E1] dark:border-[#1D4334] p-5 shadow-xs flex flex-col justify-between space-y-4">
           <div>
-            <span className="text-xs font-bold text-[#0B5D3B] dark:text-[#6EE7B7] block">
-              {t.kisanMitraTitle}
-            </span>
-            <span className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0]">
-              {language === 'hi' ? 'टोकन, कतार, तौल पर्ची या भुगतान के बारे में बोलकर पूछें' : 'Ask about tokens, wait times, weighment slip or DBT payments'}
-            </span>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#EAF2ED] dark:border-[#1D4334] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-[#E8FAF6] dark:bg-[#0E332A] text-[#0D9488]">
+                  <TrendingUp className="w-4 h-4" />
+                </span>
+                <h3 className="text-sm font-bold text-[#062B1E] dark:text-[#F0FAF5]">
+                  {isHi ? 'आज का मंडी भाव' : "Today's Mandi Rates"}
+                </h3>
+              </div>
+              <button
+                onClick={() => onNavigateToTab('prices')}
+                className="text-xs font-semibold text-[#168A5B] dark:text-[#6EE7B7] hover:underline flex items-center gap-0.5"
+              >
+                <span>{isHi ? 'देखें सभी' : 'View all'}</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Real-time rates list matching screenshot */}
+            <div className="space-y-2.5 pt-2 text-xs">
+              {liveMandiBhav.map((item, idx) => (
+                <div 
+                  key={idx} 
+                  className="flex items-center justify-between py-1 border-b border-[#F4F7F5] dark:border-[#153A2C] last:border-0 hover:bg-[#F8FAF8] dark:hover:bg-[#143026] px-1 rounded transition-colors"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>{item.icon}</span>
+                    <span className="font-semibold text-[#083324] dark:text-[#F0FAF5]">
+                      {isHi ? item.cropHi : item.cropEn}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-[#062B1E] dark:text-[#F0FAF5]">
+                      ₹ {item.price}
+                      <span className="text-[10px] text-[#4A6E5E] dark:text-[#85AFA0] font-normal"> / {isHi ? 'क्विंटल' : 'qtl'}</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.5 rounded">
+                      {item.change}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Bottom Card Action: Open Price Calculator */}
+          <button
+            onClick={() => onNavigateToTab('prices')}
+            className="w-full py-2 rounded-xl bg-[#EAF8F0] dark:bg-[#143026] hover:bg-[#D7F3E2] dark:hover:bg-[#1C4436] text-[#0B5D3B] dark:text-[#6EE7B7] text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+          >
+            <span>{isHi ? 'नमी कटौती व भुगतान कैलकुलेटर खोलें' : 'Open Moisture & Payout Calculator'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onOpenVoiceMitra}
-          className="px-4 py-2 rounded-xl bg-[#168A5B] hover:bg-[#12734C] text-white text-xs font-bold transition-all shadow-sm active:scale-95 flex-shrink-0"
-        >
-          {language === 'hi' ? 'बात करें' : 'Talk Now'}
-        </button>
-      </div>
+        {/* PANEL 3: मेरी कतार स्थिति (My Queue Status) */}
+        <div className="bg-white dark:bg-[#0E241C] rounded-2xl border border-[#DCE7E1] dark:border-[#1D4334] p-5 shadow-xs flex flex-col justify-between space-y-4">
+          <div>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#EAF2ED] dark:border-[#1D4334] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-[#EBF5FF] dark:bg-[#13283E] text-[#2563EB]">
+                  <Ticket className="w-4 h-4" />
+                </span>
+                <h3 className="text-sm font-bold text-[#062B1E] dark:text-[#F0FAF5]">
+                  {isHi ? 'मेरी कतार स्थिति' : 'My Queue Status'}
+                </h3>
+              </div>
+              <button
+                onClick={() => onNavigateToTab('queue')}
+                className="text-xs font-semibold text-[#168A5B] dark:text-[#6EE7B7] hover:underline flex items-center gap-0.5"
+              >
+                <span>{isHi ? 'देखें सभी' : 'View all'}</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Active Token Number & Status Pill */}
+            <div className="pt-3 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-semibold text-[#4A6E5E] dark:text-[#85AFA0] block">
+                  {isHi ? 'वर्तमान टोकन संख्या:' : 'Current Token Number:'}
+                </span>
+                <p className="text-2xl font-bold font-mono text-[#062B1E] dark:text-[#F0FAF5] tracking-tight mt-0.5">
+                  {activeToken ? activeToken.tokenNumber : 'A-143'}
+                </p>
+              </div>
+
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300/40">
+                {activeToken?.status === 'Completed' 
+                  ? (isHi ? 'पूर्ण' : 'Completed') 
+                  : (isHi ? 'प्रगति पर' : 'In Progress')}
+              </span>
+            </div>
+
+            {/* 4-Stage Visual Progress Stepper (As shown in screenshot) */}
+            <div className="mt-4 pt-3 border-t border-[#F4F7F5] dark:border-[#153A2C]">
+              <div className="flex items-center justify-between relative">
+                {/* Connecting Line */}
+                <div className="absolute top-3 left-4 right-4 h-0.5 bg-[#DCE7E1] dark:bg-[#2B5E4A] -z-0"></div>
+
+                {/* Stage 1: पंजीकरण (Registration) */}
+                <div className="flex flex-col items-center relative z-10">
+                  <div className="w-6 h-6 rounded-full bg-[#168A5B] text-white flex items-center justify-center text-[10px] font-bold">
+                    ✓
+                  </div>
+                  <span className="text-[10px] font-bold text-[#0B5D3B] dark:text-[#6EE7B7] mt-1">
+                    {isHi ? 'पंजीकरण' : 'Reg.'}
+                  </span>
+                </div>
+
+                {/* Stage 2: तौल (Weighing - Active Pulse) */}
+                <div className="flex flex-col items-center relative z-10">
+                  <div className="w-6 h-6 rounded-full bg-amber-400 text-black flex items-center justify-center text-[10px] font-bold ring-4 ring-amber-400/20 animate-pulse">
+                    •
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 mt-1">
+                    {isHi ? 'तौल' : 'Weighing'}
+                  </span>
+                </div>
+
+                {/* Stage 3: भुगतान (Payment) */}
+                <div className="flex flex-col items-center relative z-10">
+                  <div className="w-6 h-6 rounded-full bg-white dark:bg-[#0E241C] border-2 border-[#DCE7E1] dark:border-[#2B5E4A] text-[#4A6E5E] flex items-center justify-center text-[10px]">
+                    3
+                  </div>
+                  <span className="text-[10px] text-[#4A6E5E] dark:text-[#85AFA0] mt-1">
+                    {isHi ? 'भुगतान' : 'Payment'}
+                  </span>
+                </div>
+
+                {/* Stage 4: समाप्त (Completed) */}
+                <div className="flex flex-col items-center relative z-10">
+                  <div className="w-6 h-6 rounded-full bg-white dark:bg-[#0E241C] border-2 border-[#DCE7E1] dark:border-[#2B5E4A] text-[#4A6E5E] flex items-center justify-center text-[10px]">
+                    4
+                  </div>
+                  <span className="text-[10px] text-[#4A6E5E] dark:text-[#85AFA0] mt-1">
+                    {isHi ? 'समाप्त' : 'Done'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Location & Wait Time Details */}
+            <div className="mt-4 space-y-1.5 text-xs">
+              <p className="text-[#3E6554] dark:text-[#BBDCD0] flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[#168A5B]" />
+                <span>{isHi ? 'मंडी केंद्र: भोपाल कृषि उपज मंडी समिति' : 'Centre: Bhopal APMC Mandi Yard'}</span>
+              </p>
+              <p className="text-[#3E6554] dark:text-[#BBDCD0] flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>{isHi ? `अनुमानित प्रतीक्षा समय: ${activeToken?.estimatedWaitMins || 25} मिनट` : `Estimated Wait: ${activeToken?.estimatedWaitMins || 25} Mins`}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Action Button to Open QR Gate Pass */}
+          <button
+            onClick={() => {
+              if (onOpenGatePassQr) {
+                onOpenGatePassQr();
+              } else {
+                onNavigateToTab('queue');
+              }
+            }}
+            className="w-full py-2 rounded-xl bg-[#168A5B] hover:bg-[#0B5D3B] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>{isHi ? 'डिजिटल गेट पास एवं QR कोड देखें' : 'View Digital QR Gate Pass'}</span>
+          </button>
+        </div>
+
+      </section>
+
     </div>
   );
 };
