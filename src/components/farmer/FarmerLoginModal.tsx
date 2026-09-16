@@ -112,19 +112,11 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
       if (res.ok) {
         setOtpSent(true);
         setOtpCountdown(60);
-        if (data.previewOtp) {
-          setOtpNotice(
-            language === 'hi'
-              ? `ओटीपी कोड: ${data.previewOtp} (सत्यापन कोड)`
-              : `Verification code: ${data.previewOtp}`
-          );
-        } else {
-          setOtpNotice(
-            language === 'hi'
-              ? 'सत्यापन कोड आपके ईमेल पर सफलतापूर्वक भेजा गया है।'
-              : 'Verification code dispatched to your email address.'
-          );
-        }
+        setOtpNotice(
+          language === 'hi'
+            ? 'सत्यापन कोड आपके ईमेल पर सफलतापूर्वक भेजा गया है।'
+            : 'Verification code dispatched to your email address.'
+        );
         playAudioChime();
       } else {
         setInlineError({ en: data.error, hi: data.error });

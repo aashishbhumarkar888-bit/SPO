@@ -39,28 +39,8 @@ import { initializeFirestoreData, saveFarmerToFirestore, saveTokenToFirestore } 
 import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles, Volume2 } from 'lucide-react';
 
 export default function App() {
-  const [currentRole, setCurrentRole] = useState<AppRole>(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const roleParam = params.get('role');
-      if (roleParam === 'supervisor') {
-        const sup = localStorage.getItem('spo_supervisor_session');
-        if (sup) return 'supervisor';
-      }
-      if (roleParam === 'superadmin') {
-        const sa = localStorage.getItem('spo_superadmin_session');
-        if (sa) return 'superadmin';
-      }
-      const isFarmerActive = sessionStorage.getItem('spo_farmer_session_active') === 'true';
-      const savedFarmer = localStorage.getItem('agriseva_farmer');
-      if (savedFarmer && isFarmerActive) {
-        return 'farmer';
-      }
-    } catch {
-      // restricted environments
-    }
-    return 'landing';
-  });
+  const [currentRole, setCurrentRole] = useState<AppRole>('landing');
+  const [isSessionHydrating, setIsSessionHydrating] = useState<boolean>(true);
   const [language, setLanguage] = useState<LanguageCode>(() => {
     try {
       const saved = localStorage.getItem('agriseva_language');
@@ -111,39 +91,8 @@ export default function App() {
   }, [theme]);
 
   // Authenticated operational sessions (Supervisor & Super Admin)
-  const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(() => {
-    try {
-      const saved = localStorage.getItem('spo_supervisor_session');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const [superAdminSession, setSuperAdminSession] = useState<SuperAdminSession | null>(() => {
-    try {
-      const saved = localStorage.getItem('spo_superadmin_session');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  useEffect(() => {
-    if (supervisorSession) {
-      localStorage.setItem('spo_supervisor_session', JSON.stringify(supervisorSession));
-    } else {
-      localStorage.removeItem('spo_supervisor_session');
-    }
-  }, [supervisorSession]);
-
-  useEffect(() => {
-    if (superAdminSession) {
-      localStorage.setItem('spo_superadmin_session', JSON.stringify(superAdminSession));
-    } else {
-      localStorage.removeItem('spo_superadmin_session');
-    }
-  }, [superAdminSession]);
+  const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(null);
+  const [superAdminSession, setSuperAdminSession] = useState<SuperAdminSession | null>(null);
 
   // Seed and verify Firebase Firestore database tables & collections
   useEffect(() => {
@@ -151,17 +100,41 @@ export default function App() {
   }, []);
 
   // Security modals & Jury demo states
-  const [isFarmerLoginModalOpen, setIsFarmerLoginModalOpen] = useState<boolean>(() => {
-    try {
-      const isFarmerActive = sessionStorage.getItem('spo_farmer_session_active') === 'true';
-      const isSupActive = !!localStorage.getItem('spo_supervisor_session');
-      const isSaActive = !!localStorage.getItem('spo_superadmin_session');
-      // Prompt for login immediately at the beginning if no active authenticated session
-      return !isFarmerActive && !isSupActive && !isSaActive;
-    } catch {
-      return true;
-    }
-  });
+  const [isFarmerLoginModalOpen, setIsFarmerLoginModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const hydrateSession = async () => {
+      try {
+        const res = await fetch('/api/auth/verify-session');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            setCurrentRole(data.user.role as AppRole);
+            if (data.user.role === 'farmer') {
+              const saved = localStorage.getItem('agriseva_farmer');
+              if (saved) setFarmer(JSON.parse(saved));
+            } else if (data.user.role === 'supervisor') {
+              setSupervisorSession({ supervisorId: data.user.userId, officerName: data.user.email, terminalId: 'T-1', assignment: 'Hydrated Session' });
+            } else if (data.user.role === 'superadmin') {
+              setSuperAdminSession({ adminId: data.user.userId, adminName: data.user.email, gatewaySessionId: 'SA-1', activeSubsystems: [] });
+            }
+          } else {
+            setCurrentRole('landing');
+            setIsFarmerLoginModalOpen(true);
+          }
+        } else {
+          setCurrentRole('landing');
+          setIsFarmerLoginModalOpen(true);
+        }
+      } catch (err) {
+        setCurrentRole('landing');
+        setIsFarmerLoginModalOpen(true);
+      } finally {
+        setIsSessionHydrating(false);
+      }
+    };
+    hydrateSession();
+  }, []);
   const [isFarmerRegistrationModalOpen, setIsFarmerRegistrationModalOpen] = useState<boolean>(false);
   const [isSupervisorModalOpen, setIsSupervisorModalOpen] = useState<boolean>(false);
   const [isSuperAdminModalOpen, setIsSuperAdminModalOpen] = useState<boolean>(false);
@@ -210,18 +183,8 @@ export default function App() {
     playAudioChime();
   };
 
-  const handleSupervisorLogout = () => {
-    sessionStorage.clear();
-    if (supervisorSession) {
-      auditLogger.log({
-        action: 'SUPERVISOR_LOGGED_OUT',
-        actorRole: 'SUPERVISOR',
-        actorId: supervisorSession.supervisorId,
-        targetEntity: 'Session',
-        targetId: supervisorSession.terminalId,
-        description: `Supervisor ${supervisorSession.officerName} cleanly terminated station session and purged session storage`
-      });
-    }
+  const handleSupervisorLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
     setSupervisorSession(null);
     setCurrentRole('landing');
     playAudioChime();
@@ -234,27 +197,15 @@ export default function App() {
     playAudioChime();
   };
 
-  const handleSuperAdminLogout = () => {
-    sessionStorage.clear();
-    if (superAdminSession) {
-      auditLogger.log({
-        action: 'SUPER_ADMIN_LOGGED_OUT',
-        actorRole: 'SUPER_ADMIN',
-        actorId: superAdminSession.adminId,
-        targetEntity: 'GovernancePortal',
-        targetId: superAdminSession.gatewaySessionId,
-        description: `Administrator ${superAdminSession.adminName} cleanly terminated governance session and purged session storage`
-      });
-    }
+  const handleSuperAdminLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
     setSuperAdminSession(null);
     setCurrentRole('landing');
     playAudioChime();
   };
 
-  const handleFarmerClearSessionAndLogout = () => {
-    sessionStorage.clear();
-    localStorage.removeItem('spo_supervisor_session');
-    localStorage.removeItem('spo_superadmin_session');
+  const handleFarmerClearSessionAndLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
     localStorage.removeItem('agriseva_farmer');
     const farmerName = farmer?.fullName || 'Farmer';
     const kisanId = farmer?.kisanId || 'GUEST';
@@ -569,6 +520,14 @@ export default function App() {
   const activeToken = farmer
     ? (tokens.find(t => t.kisanId === farmer.kisanId && t.status !== 'Completed') || tokens.find(t => t.kisanId === farmer.kisanId))
     : undefined;
+
+  if (isSessionHydrating) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-slate-500 animate-pulse font-medium">Authenticating Secure Session...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen bg-[#F4F7F5] dark:bg-[#071711] text-[#063B2A] dark:text-[#F0FAF5] flex flex-col transition-colors duration-200 ${outdoorMode ? 'outdoor-contrast-mode' : ''}`}>

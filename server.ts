@@ -9,8 +9,23 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+import cookieParser from 'cookie-parser';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { SEEDED_STAFF_ADMINS } from './src/services/firestoreDbService';
 
 dotenv.config();
+
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try {
+    initializeApp({
+      credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+    });
+  } catch (err) {
+    console.error('Failed to initialize Firebase Admin', err);
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +39,27 @@ app.use(cors({
   methods: ['GET', 'POST']
 }));
 app.use(express.json({ limit: '100kb' }));
+app.use(cookieParser());
+
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('Server misconfiguration: JWT_SECRET is not set in environment');
+  return secret;
+};
+
+const authenticateSession = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    const token = req.cookies.spo_session;
+    if (!token) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    const decoded = jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] });
+    (req as any).user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, error: 'Invalid or expired session' });
+  }
+};
 
 const otpSendLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -171,6 +207,19 @@ app.post('/api/auth/verify-smtp-otp', otpVerifyLimiter, (req, res) => {
     record.verified = true;
     emailOtpStore.delete(cleanEmail);
 
+    const token = jwt.sign(
+      { email: cleanEmail, role: 'farmer' },
+      getJwtSecret(),
+      { expiresIn: '12h' }
+    );
+
+    res.cookie('spo_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 12 * 60 * 60 * 1000 // 12 hours
+    });
+
     return res.json({
       success: true,
       message: 'Email successfully verified',
@@ -182,7 +231,7 @@ app.post('/api/auth/verify-smtp-otp', otpVerifyLimiter, (req, res) => {
 });
 
 // API 4: Python + Pandas + Scikit-Learn Dynamic Queue Reallocation & Service Time Predictor
-app.post('/api/ml/reallocate-and-predict', (req, res) => {
+app.post('/api/ml/reallocate-and-predict', authenticateSession, (req, res) => {
   try {
     const { tokens, counters } = req.body;
     const pythonScriptPath = path.join(process.cwd(), 'ml', 'dynamic_allocator.py');
@@ -217,6 +266,74 @@ app.post('/api/ml/reallocate-and-predict', (req, res) => {
     });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'ML prediction request failed' });
+  }
+});
+
+// API 5: Verify Session
+app.get('/api/auth/verify-session', authenticateSession, (req, res) => {
+  const user = (req as any).user;
+  res.json({ 
+    success: true, 
+    authenticated: true,
+    user: {
+      userId: user.userId || user.email,
+      role: user.role,
+      email: user.email
+    } 
+  });
+});
+
+// API 6: Logout
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('spo_session', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  });
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// API 7: Staff Login
+const staffLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts' }
+});
+
+app.post('/api/auth/staff-login', staffLoginLimiter, async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) return res.status(401).json({ error: 'Missing token' });
+
+    if (!getApps().length) {
+      return res.status(500).json({ error: 'Server authentication misconfigured' });
+    }
+
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const email = decodedToken.email;
+    if (!email) return res.status(401).json({ error: 'Token missing email' });
+
+    const staffRecord = SEEDED_STAFF_ADMINS.find(s => s.email.toLowerCase() === email.toLowerCase());
+    if (!staffRecord) {
+      return res.status(403).json({ error: 'Unauthorized staff identity' });
+    }
+
+    const token = jwt.sign(
+      { email: staffRecord.email, role: staffRecord.role, userId: staffRecord.staffId },
+      getJwtSecret(),
+      { expiresIn: '12h' }
+    );
+
+    res.cookie('spo_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 12 * 60 * 60 * 1000
+    });
+
+    return res.json({ success: true, role: staffRecord.role, email: staffRecord.email });
+  } catch (err: any) {
+    return res.status(401).json({ error: 'Invalid staff token' });
   }
 });
 

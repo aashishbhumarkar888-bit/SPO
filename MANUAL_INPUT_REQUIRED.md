@@ -123,6 +123,27 @@
 - Whether you need data deletion ("right to be forgotten") capability
 - Whether there is an existing privacy policy document to link from the app
 
+## 9. JWT Secret Key
+
+**Why:** The server-side authentication foundation implemented in Phase 2A uses JSON Web Tokens (JWT) to secure API endpoints. A strong, secret key is required to sign and verify these tokens.
+
+**What I need from you:**
+- Generate a cryptographically secure random string (at least 32 characters long).
+- Set this string as the `JWT_SECRET` environment variable in your production environment.
+
+**Impact:** Without this secret, the server will fail to start and authentication will be broken.
+
+## 10. Firebase Service Account
+
+**Why:** The Phase 2 staff authentication uses `firebase-admin` to securely verify staff login tokens on the server. This requires a Service Account JSON.
+
+**What I need from you:**
+- Generate a Firebase Service Account JSON from the Firebase Console (Project Settings > Service Accounts > Generate new private key).
+- Stringify the JSON and set it as the `FIREBASE_SERVICE_ACCOUNT` environment variable in your production environment.
+- Provision staff users in Firebase Authentication (Email/Password) with exact emails matching those in `SEEDED_STAFF_ADMINS`.
+
+**Impact:** Without this environment variable, staff (Supervisors/Admins) will not be able to log in, though farmer authentication will continue to function.
+
 ---
 
 ## Summary
@@ -133,6 +154,8 @@
 | Firebase project decision | Decision | Phase 1 |
 | Deployment target | Decision | Phase 7-8 |
 | User auth strategy | Decision | Phase 2 |
+| JWT Secret Key | Credentials | Phase 2A |
+| Firebase Service Account | Credentials | Phase 2 |
 | Business rules confirmation | Verification | Phase 5 |
 | External integrations | Decision | Post-Phase 8 |
 | Gemini API key | Credentials | Post-Phase 8 |

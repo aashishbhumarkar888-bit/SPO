@@ -5,6 +5,9 @@ import { SupervisorSession } from '../../types';
 import { playAudioChime } from '../../utils/speech';
 import { DemoCredentialsDirectory } from '../common/DemoCredentialsDirectory';
 import { DemoAccountDirectoryItem } from '../../services/authService';
+import { SEEDED_STAFF_ADMINS } from '../../services/firestoreDbService';
+import { auth } from '../../services/firebaseConfig';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 interface SupervisorLoginModalProps {
   isOpen: boolean;
@@ -42,60 +45,80 @@ export const SupervisorLoginModal: React.FC<SupervisorLoginModalProps> = ({
     'CEN-A': 'Procurement Centre A (Mandi Yard #1)'
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    setTimeout(() => {
-      if (!import.meta.env.DEV) {
-        setError('Supervisor authentication is currently disabled. Proper IAM integration pending Phase 2.');
-        setLoading(false);
-        return;
+    try {
+      const staffRecord = SEEDED_STAFF_ADMINS.find(
+        s => s.staffId.toLowerCase() === supervisorId.trim().toLowerCase()
+      );
+
+      if (!staffRecord) {
+        throw new Error('Supervisor ID not recognized in staff registry.');
       }
 
-      if (passcode.trim().length >= 4) {
-        const now = new Date();
-        const expires = new Date(now.getTime() + 6 * 60 * 60 * 1000);
-        const session: SupervisorSession = {
-          supervisorId: supervisorId.trim() || 'SUP-WRD-01',
-          officerName: supervisorId.includes('02') ? 'Sunil Meshram' : 'Dnyaneshwar S. Kulkarni',
-          designation: 'Mandi Board Field Officer & Kendra Supervisor',
-          centreId: centreId,
-          centreName: centreNames[centreId] || 'Wardha Central APMC Mandi Yard',
-          loginTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          tokenExpiresAt: expires.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          terminalIp: '192.168.10.45 (Local APMC Intranet)',
-          terminalId: 'APMC-WRD-TERM-04',
-          clearanceLevel: 'LEVEL-2_MANDI_SUPERVISOR',
-          activeShift: 'Morning (08:00 - 14:00)'
-        };
+      // Authenticate with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, staffRecord.email, passcode);
+      const idToken = await userCredential.user.getIdToken();
 
-        auditLogger.log({
-          action: 'SUPERVISOR_AUTHENTICATED',
-          actorRole: 'SUPERVISOR',
-          actorId: session.supervisorId,
-          targetEntity: 'OperationsConsole',
-          targetId: session.centreId,
-          description: `Supervisor ${session.officerName} (${session.supervisorId}) authenticated to ${session.centreName}`
-        });
+      // Establish secure server session
+      const res = await fetch('/api/auth/staff-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
 
-        playAudioChime();
-        setLoading(false);
-        onLoginSuccess(session);
-      } else {
-        setError('Invalid Security Passcode.');
-        setLoading(false);
-        auditLogger.log({
-          action: 'SUPERVISOR_AUTH_FAILED',
-          actorRole: 'SUPERVISOR',
-          actorId: supervisorId,
-          targetEntity: 'OperationsConsole',
-          targetId: centreId,
-          description: `Failed authentication attempt for supervisor ID ${supervisorId}`
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Server rejected staff session');
       }
-    }, 350);
+
+      if (data.role !== 'supervisor') {
+        throw new Error('Authenticated account does not have supervisor privileges');
+      }
+
+      const now = new Date();
+      const expires = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+      const session: SupervisorSession = {
+        supervisorId: staffRecord.staffId,
+        officerName: staffRecord.fullName,
+        designation: staffRecord.designation,
+        centreId: centreId,
+        centreName: centreNames[centreId] || staffRecord.centreName || 'Assigned Centre',
+        loginTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        tokenExpiresAt: expires.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        terminalIp: '192.168.10.45 (Local APMC Intranet)',
+        terminalId: 'APMC-WRD-TERM-04',
+        clearanceLevel: staffRecord.clearanceLevel as any,
+        activeShift: 'Standard Shift' as any
+      };
+
+      auditLogger.log({
+        action: 'SUPERVISOR_AUTHENTICATED',
+        actorRole: 'SUPERVISOR',
+        actorId: session.supervisorId,
+        targetEntity: 'OperationsConsole',
+        targetId: session.centreId,
+        description: `Supervisor ${session.officerName} (${session.supervisorId}) authenticated securely via Firebase & Server Session`
+      });
+
+      playAudioChime();
+      onLoginSuccess(session);
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please check credentials.');
+      auditLogger.log({
+        action: 'SUPERVISOR_AUTH_FAILED',
+        actorRole: 'SUPERVISOR',
+        actorId: supervisorId,
+        targetEntity: 'OperationsConsole',
+        targetId: centreId,
+        description: `Failed authentication attempt for supervisor ID ${supervisorId}`
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -177,7 +200,7 @@ export const SupervisorLoginModal: React.FC<SupervisorLoginModalProps> = ({
 
           <div>
             <label className="block text-xs font-bold text-[#063B2A] mb-1">
-              Terminal Passcode / Security PIN
+              Terminal Passcode / Password
             </label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />

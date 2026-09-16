@@ -5,6 +5,9 @@ import { auditLogger } from '../../domain/auditLog';
 import { playAudioChime } from '../../utils/speech';
 import { DemoCredentialsDirectory } from '../common/DemoCredentialsDirectory';
 import { DemoAccountDirectoryItem } from '../../services/authService';
+import { SEEDED_STAFF_ADMINS } from '../../services/firestoreDbService';
+import { auth } from '../../services/firebaseConfig';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 interface SuperAdminLoginModalProps {
   isOpen: boolean;
@@ -34,62 +37,80 @@ export const SuperAdminLoginModal: React.FC<SuperAdminLoginModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    setTimeout(() => {
-      if (!import.meta.env.DEV) {
-        setError('Super Admin authentication is currently disabled. Proper IAM integration pending Phase 2.');
-        setLoading(false);
-        return;
+    try {
+      const staffRecord = SEEDED_STAFF_ADMINS.find(
+        s => s.staffId.toLowerCase() === adminId.trim().toLowerCase()
+      );
+
+      if (!staffRecord) {
+        throw new Error('Admin ID not recognized in state registry.');
       }
 
-      const validPass = passphrase.trim().length >= 4;
-      
-      if (validPass) {
-        const now = new Date();
-        const expires = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8-hour session
-        const session: SuperAdminSession = {
-          adminId: adminId.trim() || 'ADMIN-MH-STATE-01',
-          adminName: 'Sanjay V. Deshmukh, IAS',
-          designation: 'Principal Secretary & State Mandi Board Commissioner',
-          department: 'Department of Agriculture, Govt. of Maharashtra & MoA&FW',
-          state: 'Maharashtra',
-          district: 'Wardha Division (Zone-IV)',
-          loginTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          tokenExpiresAt: expires.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          gatewaySessionId: `MSAMB-SEC-${Math.floor(100000 + Math.random() * 900000)}`,
-          terminalIp: '10.42.0.1 (NIC Secure GovNet)',
-          clearanceLevel: 'LEVEL-4_STATE_GOVERNANCE'
-        };
+      // Authenticate with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, staffRecord.email, passphrase);
+      const idToken = await userCredential.user.getIdToken();
 
-        auditLogger.log({
-          action: 'SUPER_ADMIN_AUTHENTICATED',
-          actorRole: 'SUPER_ADMIN',
-          actorId: session.adminId,
-          targetEntity: 'GovernancePortal',
-          targetId: 'MSAMB_WARDHA_GATEWAY',
-          description: `Super Admin ${session.adminName} (${session.adminId}) established authenticated state governance session`
-        });
+      // Establish secure server session
+      const res = await fetch('/api/auth/staff-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
 
-        playAudioChime();
-        setLoading(false);
-        onLoginSuccess(session);
-      } else {
-        setError('Invalid Security Passphrase.');
-        setLoading(false);
-        auditLogger.log({
-          action: 'SUPER_ADMIN_AUTH_FAILED',
-          actorRole: 'SUPER_ADMIN',
-          actorId: adminId,
-          targetEntity: 'GovernancePortal',
-          targetId: 'MSAMB_WARDHA_GATEWAY',
-          description: `Unauthorized state policy gateway access attempt for ID ${adminId}`
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Server rejected gateway session');
       }
-    }, 450);
+
+      if (data.role !== 'superadmin') {
+        throw new Error('Authenticated account does not have LEVEL-4 privileges');
+      }
+
+      const now = new Date();
+      const expires = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+      const session: SuperAdminSession = {
+        adminId: staffRecord.staffId,
+        adminName: staffRecord.fullName,
+        designation: staffRecord.designation,
+        department: 'Department of Agriculture, Govt. of Maharashtra & MoA&FW',
+        state: 'Maharashtra',
+        district: 'Statewide',
+        loginTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        tokenExpiresAt: expires.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        gatewaySessionId: `MSAMB-SEC-${Math.floor(100000 + Math.random() * 900000)}`,
+        terminalIp: '10.42.0.1 (NIC Secure GovNet)',
+        clearanceLevel: staffRecord.clearanceLevel as any
+      };
+
+      auditLogger.log({
+        action: 'SUPER_ADMIN_AUTHENTICATED',
+        actorRole: 'SUPER_ADMIN',
+        actorId: session.adminId,
+        targetEntity: 'GovernancePortal',
+        targetId: 'MSAMB_GATEWAY',
+        description: `Super Admin ${session.adminName} (${session.adminId}) established authenticated state governance session via Firebase Auth`
+      });
+
+      playAudioChime();
+      onLoginSuccess(session);
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please check credentials.');
+      auditLogger.log({
+        action: 'SUPER_ADMIN_AUTH_FAILED',
+        actorRole: 'SUPER_ADMIN',
+        actorId: adminId,
+        targetEntity: 'GovernancePortal',
+        targetId: 'MSAMB_GATEWAY',
+        description: `Unauthorized state policy gateway access attempt for ID ${adminId}`
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -161,7 +182,7 @@ export const SuperAdminLoginModal: React.FC<SuperAdminLoginModalProps> = ({
 
           <div>
             <label className="block text-xs font-bold text-[#063B2A] mb-1">
-              Master Passphrase / Security Token PIN
+              Master Passphrase / Password
             </label>
             <div className="relative">
               <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3" />

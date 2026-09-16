@@ -218,7 +218,7 @@ export const SEEDED_DEMO_ACCOUNTS: DemoAccountDirectoryItem[] = [
       staffId: 'MH-WRD-8921'
     },
     passcodeLabel: 'OTP / PIN',
-    passcodeLabelHi: 'डेमो ओटीपी / पिन',
+    passcodeLabelHi: 'ओटीपी / पिन',
     profileReference: COMPREHENSIVE_SEED_FARMERS[0],
     notes: 'Kharif Soyabean & Cotton farmer with linked SBI DBT bank account (Kisan ID: MH-WRD-8921).'
   },
@@ -238,7 +238,7 @@ export const SEEDED_DEMO_ACCOUNTS: DemoAccountDirectoryItem[] = [
       staffId: 'F-10234'
     },
     passcodeLabel: 'OTP / PIN',
-    passcodeLabelHi: 'डेमो ओटीपी / पिन',
+    passcodeLabelHi: 'ओटीपी / पिन',
     profileReference: COMPREHENSIVE_SEED_FARMERS[1],
     notes: 'Rabi Wheat farmer (PNB DBT account, active token AS-118, Kisan ID: F-10234).'
   },
@@ -258,7 +258,7 @@ export const SEEDED_DEMO_ACCOUNTS: DemoAccountDirectoryItem[] = [
       staffId: 'MH-WRD-9011'
     },
     passcodeLabel: 'OTP / PIN',
-    passcodeLabelHi: 'डेमो ओटीपी / पिन',
+    passcodeLabelHi: 'ओटीपी / पिन',
     profileReference: COMPREHENSIVE_SEED_FARMERS[2],
     notes: 'Priority female farmer beneficiary with Bank of Maharashtra DBT account (Kisan ID: MH-WRD-9011).'
   },
@@ -278,7 +278,7 @@ export const SEEDED_DEMO_ACCOUNTS: DemoAccountDirectoryItem[] = [
       staffId: 'MH-WRD-4412'
     },
     passcodeLabel: 'OTP / PIN',
-    passcodeLabelHi: 'डेमो ओटीपी / पिन',
+    passcodeLabelHi: 'ओटीपी / पिन',
     profileReference: COMPREHENSIVE_SEED_FARMERS[3],
     notes: 'Custom hiring and tractor rental user with Canara Bank account (Kisan ID: MH-WRD-4412).'
   },
