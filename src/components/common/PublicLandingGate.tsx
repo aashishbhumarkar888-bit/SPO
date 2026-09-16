@@ -86,26 +86,29 @@ export const PublicLandingGate: React.FC<PublicLandingGateProps> = ({
       return;
     }
 
-    // Check against authorized departmental secret keys
-    if (key === '1234' || key.toUpperCase() === 'SUP-WRD-01' || key.toLowerCase() === 'supervisor') {
-      playAudioChime();
-      setIsSecretKeyPromptOpen(false);
-      setSecretKeyInput('');
-      setSecretKeyError(null);
-      onOpenSupervisorLogin();
-    } else if (key === 'admin2026' || key.toUpperCase() === 'ADMIN-MH-STATE-01' || key.toLowerCase() === 'admin') {
-      playAudioChime();
-      setIsSecretKeyPromptOpen(false);
-      setSecretKeyInput('');
-      setSecretKeyError(null);
-      onOpenSuperAdminLogin();
-    } else {
-      setSecretKeyError(
-        language === 'hi'
-          ? 'अमान्य सुरक्षा कुंजी। प्रवेश अस्वीकृत (Access Denied)।'
-          : 'Invalid departmental secret key. Access denied.'
-      );
+    if (import.meta.env.DEV) {
+      if (key.toLowerCase() === 'supervisor') {
+        playAudioChime();
+        setIsSecretKeyPromptOpen(false);
+        setSecretKeyInput('');
+        setSecretKeyError(null);
+        onOpenSupervisorLogin();
+        return;
+      } else if (key.toLowerCase() === 'admin') {
+        playAudioChime();
+        setIsSecretKeyPromptOpen(false);
+        setSecretKeyInput('');
+        setSecretKeyError(null);
+        onOpenSuperAdminLogin();
+        return;
+      }
     }
+
+    setSecretKeyError(
+      language === 'hi'
+        ? 'अमान्य सुरक्षा कुंजी। प्रवेश अस्वीकृत (Access Denied)।'
+        : 'Invalid departmental secret key. Access denied.'
+    );
   };
 
   return (

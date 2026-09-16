@@ -2,37 +2,29 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function
-    function isSignedIn() {
-      return request.auth != null;
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // Farmers directory:
-    // Anyone in the portal can read farmer records for validation/tokens, 
-    // and authenticated farmers or staff can write/update.
+    // Currently NO authenticated identity model exists (Phase 2 pending).
+    // Therefore, all access to sensitive collections is blocked to prevent data leakage.
+    // This intentionally breaks functionality that relies on insecure public access.
+    
     match /farmers/{farmerId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if false;
     }
 
-    // Tokens & Mandi passes:
-    // Read and create/update tokens
     match /tokens/{tokenId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if false;
     }
 
-    // Staff and admins directory:
     match /staff_users/{staffId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if false;
     }
 
-    // Audit logs:
     match /audit_logs/{logId} {
-      allow read: if true;
-      allow create: if true;
-      allow update, delete: if false;
+      allow read, write: if false;
     }
   }
 }

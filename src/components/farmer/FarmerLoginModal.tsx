@@ -82,8 +82,7 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
       setIsSendingOtp(false);
       setOtpSent(true);
       setOtpCountdown(30);
-      setOtpCode('1234'); // Demo OTP for quick testing
-      setOtpNotice(language === 'hi' ? 'ओटीपी 1234 भेजा गया है।' : 'Verification OTP 1234 sent.');
+      setOtpNotice(language === 'hi' ? 'ओटीपी भेजा गया है।' : 'Verification OTP sent.');
       playAudioChime();
     }, 400);
   };
@@ -114,7 +113,6 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
         setOtpSent(true);
         setOtpCountdown(60);
         if (data.previewOtp) {
-          setOtpCode(data.previewOtp);
           setOtpNotice(
             language === 'hi'
               ? `ओटीपी कोड: ${data.previewOtp} (सत्यापन कोड)`
@@ -134,8 +132,7 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
     } catch {
       setIsSendingOtp(false);
       setOtpSent(true);
-      setOtpCode('123456');
-      setOtpNotice('Offline fallback OTP: 123456');
+      setOtpNotice('OTP delivery failed. Please retry.');
     }
   };
 
@@ -184,8 +181,8 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
 
     if (!otpCode.trim()) {
       setInlineError({
-        en: 'Please enter the 4-digit OTP (Demo OTP: 1234).',
-        hi: 'कृपया 4-अंकीय ओटीपी दर्ज करें (डेमो ओटीपी: 1234)।'
+        en: 'Please enter the 4-digit OTP.',
+        hi: 'कृपया 4-अंकीय ओटीपी दर्ज करें।'
       });
       return;
     }
@@ -463,7 +460,7 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
                           setIdentifierInput(digitsOnly.replace(/(\d{4})(?=\d)/g, '$1 '));
                         }
                       }}
-                      placeholder={activeMode === 'phone' ? '98224 81920' : '5678 1234 9082'}
+                      placeholder={activeMode === 'phone' ? '98224 81920' : 'XXXX XXXX 9082'}
                       className="w-full pl-9 pr-24 py-2.5 rounded-xl border border-slate-300 dark:border-[#2B5E4A] bg-slate-50 dark:bg-[#143026] text-slate-900 dark:text-white text-xs sm:text-sm font-mono tracking-wider focus:ring-2 focus:ring-[#168A5B]"
                     />
 
@@ -497,7 +494,7 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
                   maxLength={6}
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder={language === 'hi' ? 'ओटीपी दर्ज करें (उदा. 1234)' : 'Enter code (e.g. 1234)'}
+                  placeholder={language === 'hi' ? 'ओटीपी दर्ज करें' : 'Enter code'}
                   className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-[#2B5E4A] bg-slate-50 dark:bg-[#143026] text-slate-900 dark:text-white text-xs sm:text-sm font-mono text-center tracking-widest focus:ring-2 focus:ring-[#168A5B]"
                 />
               </div>

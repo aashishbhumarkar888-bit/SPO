@@ -130,7 +130,6 @@ export interface StaffAdminRecord {
   email: string;
   mobile: string;
   aadhaarMasked: string;
-  defaultPasscode: string;
   centreId?: string;
   centreName?: string;
   clearanceLevel: string;
@@ -147,7 +146,6 @@ export const SEEDED_STAFF_ADMINS: StaffAdminRecord[] = [
     email: 'supervisor.wardha@agriseva.gov.in',
     mobile: '9422156789',
     aadhaarMasked: 'XXXX XXXX 1098',
-    defaultPasscode: '1234',
     centreId: 'CEN-1',
     centreName: 'Wardha Central APMC Mandi Yard',
     clearanceLevel: 'LEVEL-2_MANDI_SUPERVISOR'
@@ -162,7 +160,6 @@ export const SEEDED_STAFF_ADMINS: StaffAdminRecord[] = [
     email: 'sunil.meshram@agriseva.gov.in',
     mobile: '9422987654',
     aadhaarMasked: 'XXXX XXXX 3321',
-    defaultPasscode: '1234',
     centreId: 'CEN-2',
     centreName: 'Sevagram Procurement Sub-Centre',
     clearanceLevel: 'LEVEL-2_MANDI_SUPERVISOR'
@@ -177,7 +174,6 @@ export const SEEDED_STAFF_ADMINS: StaffAdminRecord[] = [
     email: 'admin.msamb@agriseva.gov.in',
     mobile: '9811002233',
     aadhaarMasked: 'XXXX XXXX 0987',
-    defaultPasscode: 'admin2026',
     clearanceLevel: 'LEVEL-4_STATE_GOVERNANCE'
   }
 ];

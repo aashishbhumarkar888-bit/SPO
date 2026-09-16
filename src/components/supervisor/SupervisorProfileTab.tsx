@@ -63,8 +63,8 @@ export const SupervisorProfileTab: React.FC<SupervisorProfileTabProps> = ({
     setPinChangeError(null);
     setPinChangeSuccess(null);
 
-    if (currentPin !== '1234' && currentPin !== 'admin123') {
-      setPinChangeError('Current Security PIN is incorrect. (Default PIN: 1234)');
+    if (currentPin.length < 4) {
+      setPinChangeError('Current Security PIN is incorrect.');
       return;
     }
 
@@ -257,7 +257,7 @@ export const SupervisorProfileTab: React.FC<SupervisorProfileTabProps> = ({
               type="password"
               value={currentPin}
               onChange={e => setCurrentPin(e.target.value)}
-              placeholder="Demo: 1234"
+              placeholder="Current PIN"
               required
               className="w-full p-2.5 rounded-xl border border-[#D7E3DC] font-mono text-sm bg-white"
             />

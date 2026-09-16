@@ -26,7 +26,9 @@ export const SuperAdminLoginModal: React.FC<SuperAdminLoginModalProps> = ({
     if (account.identifiers.staffId) {
       setAdminId(account.identifiers.staffId);
     }
-    setPassphrase(account.demoPasscode);
+    if (account.demoPasscode) {
+      setPassphrase(account.demoPasscode);
+    }
     setError(null);
   };
 
@@ -38,8 +40,13 @@ export const SuperAdminLoginModal: React.FC<SuperAdminLoginModalProps> = ({
     setLoading(true);
 
     setTimeout(() => {
-      // Standard state governance clearance authentication (accepts demo credentials or standard secure pins)
-      const validPass = passphrase.trim() === 'admin2026' || passphrase.trim() === 'gov2026' || passphrase.trim() === '1234' || passphrase.trim() === 'admin123';
+      if (!import.meta.env.DEV) {
+        setError('Super Admin authentication is currently disabled. Proper IAM integration pending Phase 2.');
+        setLoading(false);
+        return;
+      }
+
+      const validPass = passphrase.trim().length >= 4;
       
       if (validPass) {
         const now = new Date();
@@ -71,7 +78,7 @@ export const SuperAdminLoginModal: React.FC<SuperAdminLoginModalProps> = ({
         setLoading(false);
         onLoginSuccess(session);
       } else {
-        setError('Invalid Security Passphrase. Authorized credentials: admin2026, gov2026, or 1234');
+        setError('Invalid Security Passphrase.');
         setLoading(false);
         auditLogger.log({
           action: 'SUPER_ADMIN_AUTH_FAILED',
@@ -165,7 +172,7 @@ export const SuperAdminLoginModal: React.FC<SuperAdminLoginModalProps> = ({
                 required
                 autoFocus
                 className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#063B2A] bg-white font-mono"
-                placeholder="Enter PIN (Demo: 1234 or admin2026)"
+                placeholder="Enter PIN"
               />
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -192,11 +199,13 @@ export const SuperAdminLoginModal: React.FC<SuperAdminLoginModalProps> = ({
           </div>
 
           {/* Test Environment Demo Credentials Panel */}
-          <DemoCredentialsDirectory
-            filterRole="superadmin"
-            onSelectAccount={handleSelectDemoAccount}
-            defaultExpanded={true}
-          />
+          {import.meta.env.DEV && (
+            <DemoCredentialsDirectory
+              filterRole="superadmin"
+              onSelectAccount={handleSelectDemoAccount}
+              defaultExpanded={true}
+            />
+          )}
         </form>
       </div>
     </div>

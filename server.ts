@@ -4,6 +4,10 @@ import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { execFile } from 'child_process';
 import nodemailer from 'nodemailer';
+import crypto from 'crypto';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import cors from 'cors';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -14,7 +18,24 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(helmet());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? process.env.ALLOWED_ORIGIN || 'https://agriseva.gov.in' : '*',
+  methods: ['GET', 'POST']
+}));
+app.use(express.json({ limit: '100kb' }));
+
+const otpSendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 OTP requests per window
+  message: { error: 'Too many OTP requests from this IP, please try again after 15 minutes' }
+});
+
+const otpVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 verification attempts per window
+  message: { error: 'Too many verification attempts, please try again later' }
+});
 
 // In-memory OTP storage for SMTP authentication
 interface OtpEntry {
@@ -40,7 +61,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // API 2: Send SMTP OTP
-app.post('/api/auth/send-smtp-otp', async (req, res) => {
+app.post('/api/auth/send-smtp-otp', otpSendLimiter, async (req, res) => {
   try {
     const { email, fullName } = req.body;
     if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -48,8 +69,8 @@ app.post('/api/auth/send-smtp-otp', async (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    // Generate 6-digit numeric OTP code
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit numeric OTP code cryptographically
+    const otpCode = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes validity
 
     emailOtpStore.set(cleanEmail, {
@@ -107,17 +128,15 @@ app.post('/api/auth/send-smtp-otp', async (req, res) => {
       }
     }
 
-    return res.json({
+    res.json({
       success: true,
       message: smtpSent 
         ? `Verification code dispatched to ${cleanEmail} via SMTP` 
         : `Verification code generated for ${cleanEmail}`,
       smtpConfigured: Boolean(smtpHost && smtpUser && smtpPass),
       smtpDelivered: smtpSent,
-      // Provide demo/testing OTP in response if SMTP credentials are unconfigured or in preview sandbox
-      previewOtp: otpCode,
-      expiresInMinutes: 10,
-      note: smtpSent ? undefined : 'SMTP credentials not configured in .env. Live OTP displayed for instant testing.'
+      ...(process.env.NODE_ENV === 'development' ? { previewOtp: otpCode } : {}),
+      expiresInMinutes: 10
     });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Internal server error' });
@@ -125,7 +144,7 @@ app.post('/api/auth/send-smtp-otp', async (req, res) => {
 });
 
 // API 3: Verify SMTP OTP
-app.post('/api/auth/verify-smtp-otp', (req, res) => {
+app.post('/api/auth/verify-smtp-otp', otpVerifyLimiter, (req, res) => {
   try {
     const { email, code } = req.body;
     if (!email || !code) {
@@ -145,7 +164,7 @@ app.post('/api/auth/verify-smtp-otp', (req, res) => {
       return res.status(400).json({ success: false, error: 'The verification code has expired. Please request a fresh code.' });
     }
 
-    if (record.code !== cleanCode && cleanCode !== '1234' && cleanCode !== '123456') {
+    if (record.code !== cleanCode) {
       return res.status(400).json({ success: false, error: 'Invalid verification code. Please check and try again.' });
     }
 

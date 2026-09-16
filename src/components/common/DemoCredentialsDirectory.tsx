@@ -206,21 +206,21 @@ export const DemoCredentialsDirectory: React.FC<DemoCredentialsDirectoryProps> =
                       <span>Aadhaar:</span>
                     </span>
                     <div className="flex items-center gap-1">
-                      <span className="font-mono font-semibold text-slate-800 dark:text-slate-200" title="Full demo mock Aadhaar">
-                        {acc.identifiers.aadhaarFull}
+                      <span className="font-mono font-semibold text-slate-800 dark:text-slate-200" title="Masked demo Aadhaar">
+                        {acc.identifiers.aadhaarMasked}
                       </span>
                       <button
                         type="button"
-                        onClick={() => handleCopy(acc.identifiers.aadhaarFull.replace(/\s/g, ''), `${acc.id}-aadh`)}
+                        onClick={() => handleCopy(acc.identifiers.aadhaarMasked, `${acc.id}-aadh`)}
                         className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white"
-                        title="Copy 12-digit Aadhaar"
+                        title="Copy Aadhaar"
                       >
                         {copiedKey === `${acc.id}-aadh` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                       </button>
                       {onSelectAccount && (
                         <button
                           type="button"
-                          onClick={() => onSelectAccount(acc, acc.identifiers.aadhaarFull.replace(/\s/g, ''))}
+                          onClick={() => onSelectAccount(acc, '')}
                           className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-[9px] font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-200"
                         >
                           Use
@@ -283,18 +283,20 @@ export const DemoCredentialsDirectory: React.FC<DemoCredentialsDirectoryProps> =
                     <span className="text-[10px] text-amber-800 dark:text-amber-300 font-semibold">
                       {language === 'hi' ? acc.passcodeLabelHi : acc.passcodeLabel}:
                     </span>
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono font-bold text-amber-900 dark:text-amber-200 bg-amber-200/60 dark:bg-amber-900/60 px-1.5 py-0.2 rounded text-[11px]">
-                        {acc.demoPasscode}
+                    <div className="flex items-center justify-between group mt-1">
+                      <span className="font-mono text-lg font-semibold tracking-widest text-brand-700 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-2 py-0.5 rounded border border-brand-100 dark:border-brand-800/50">
+                        {acc.demoPasscode || 'N/A'}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(acc.demoPasscode, `${acc.id}-pin`)}
-                        className="p-1 text-amber-700 hover:text-amber-900 dark:text-amber-300"
-                        title="Copy PIN"
-                      >
-                        {copiedKey === `${acc.id}-pin` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                      </button>
+                      {acc.demoPasscode && (
+                        <button 
+                          type="button"
+                          className="text-slate-400 hover:text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleCopy(acc.demoPasscode!, `${acc.id}-pin`)}
+                          title="Copy Code"
+                        >
+                          {copiedKey === `${acc.id}-pin` ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

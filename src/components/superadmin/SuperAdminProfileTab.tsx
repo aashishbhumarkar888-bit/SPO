@@ -59,8 +59,8 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
     setPinChangeError(null);
     setPinChangeSuccess(null);
 
-    if (currentPin !== 'admin123' && currentPin !== '9999') {
-      setPinChangeError('Current Master Passphrase is incorrect. (Default demo pass: admin123)');
+    if (currentPin.length < 6) {
+      setPinChangeError('Current Master Passphrase is incorrect.');
       return;
     }
 
@@ -251,7 +251,7 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
               type="password"
               value={currentPin}
               onChange={e => setCurrentPin(e.target.value)}
-              placeholder="Demo: admin123"
+              placeholder="Current Passphrase"
               required
               className="w-full p-2.5 rounded-xl border border-[#D7E3DC] font-mono text-sm bg-white"
             />

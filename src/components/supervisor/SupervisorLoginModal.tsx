@@ -27,7 +27,9 @@ export const SupervisorLoginModal: React.FC<SupervisorLoginModalProps> = ({
     if (account.identifiers.staffId) {
       setSupervisorId(account.identifiers.staffId);
     }
-    setPasscode(account.demoPasscode);
+    if (account.demoPasscode) {
+      setPasscode(account.demoPasscode);
+    }
     setError(null);
   };
 
@@ -46,8 +48,13 @@ export const SupervisorLoginModal: React.FC<SupervisorLoginModalProps> = ({
     setLoading(true);
 
     setTimeout(() => {
-      // Standard supervisor verification (accepts demo credentials or standard secure pin)
-      if (passcode.trim() === '1234' || passcode.trim() === 'admin123' || passcode.trim() === 'spo2026') {
+      if (!import.meta.env.DEV) {
+        setError('Supervisor authentication is currently disabled. Proper IAM integration pending Phase 2.');
+        setLoading(false);
+        return;
+      }
+
+      if (passcode.trim().length >= 4) {
         const now = new Date();
         const expires = new Date(now.getTime() + 6 * 60 * 60 * 1000);
         const session: SupervisorSession = {
@@ -77,7 +84,7 @@ export const SupervisorLoginModal: React.FC<SupervisorLoginModalProps> = ({
         setLoading(false);
         onLoginSuccess(session);
       } else {
-        setError('Invalid Security Passcode. Authorized field PIN: 1234');
+        setError('Invalid Security Passcode.');
         setLoading(false);
         auditLogger.log({
           action: 'SUPERVISOR_AUTH_FAILED',
@@ -181,7 +188,7 @@ export const SupervisorLoginModal: React.FC<SupervisorLoginModalProps> = ({
                 required
                 autoFocus
                 className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#168A5B] bg-white font-mono"
-                placeholder="Enter PIN (Demo: 1234)"
+                placeholder="Enter PIN"
               />
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -207,11 +214,13 @@ export const SupervisorLoginModal: React.FC<SupervisorLoginModalProps> = ({
           </div>
 
           {/* Test Environment Demo Credentials Panel */}
-          <DemoCredentialsDirectory
-            filterRole="supervisor"
-            onSelectAccount={handleSelectDemoAccount}
-            defaultExpanded={true}
-          />
+          {import.meta.env.DEV && (
+            <DemoCredentialsDirectory
+              filterRole="supervisor"
+              onSelectAccount={handleSelectDemoAccount}
+              defaultExpanded={true}
+            />
+          )}
         </form>
       </div>
     </div>

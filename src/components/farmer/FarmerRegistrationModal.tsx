@@ -83,29 +83,16 @@ export const FarmerRegistrationModal: React.FC<FarmerRegistrationModalProps> = (
       const data = await res.json();
       if (res.ok) {
         setOtpSent(true);
-        if (data.previewOtp) {
-          setOtpNotice(
-            language === 'hi'
-              ? `ओटीपी कोड भेजा गया: ${data.previewOtp} (सत्यापन कोड)`
-              : `Verification code generated: ${data.previewOtp}`
-          );
-          setEmailOtp(data.previewOtp);
-        } else {
-          setOtpNotice(
-            language === 'hi'
-              ? 'सत्यापन कोड आपके ईमेल पर सफलतापूर्वक भेजा गया है।'
-              : 'Verification code dispatched to your email address.'
-          );
-        }
+        setOtpNotice(
+          language === 'hi'
+            ? 'सत्यापन कोड आपके ईमेल पर सफलतापूर्वक भेजा गया है।'
+            : 'Verification code dispatched to your email address.'
+        );
       } else {
         setErrorMsg(data.error || 'Failed to send OTP');
       }
     } catch (err: any) {
-      // Offline fallback
-      setOtpSent(true);
-      const fallbackOtp = '123456';
-      setEmailOtp(fallbackOtp);
-      setOtpNotice(`Offline OTP: ${fallbackOtp}`);
+      setErrorMsg('Failed to send OTP');
     } finally {
       setIsSendingOtp(false);
     }
@@ -134,12 +121,7 @@ export const FarmerRegistrationModal: React.FC<FarmerRegistrationModalProps> = (
         setErrorMsg(data.error || 'Invalid OTP');
       }
     } catch (err) {
-      if (emailOtp === '123456' || emailOtp === '1234') {
-        setOtpVerified(true);
-        setOtpNotice('Verified successfully');
-      } else {
-        setErrorMsg('Verification failed');
-      }
+      setErrorMsg('Verification failed');
     }
   };
 
@@ -517,7 +499,7 @@ export const FarmerRegistrationModal: React.FC<FarmerRegistrationModalProps> = (
                     const formatted = raw.replace(/(\d{4})(?=\d)/g, '$1 ');
                     setAadhaarNumber(formatted);
                   }}
-                  placeholder="5678 1234 9082"
+                  placeholder="XXXX XXXX XXXX"
                   className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-[#2B5E4A] bg-slate-50 dark:bg-[#143026] text-slate-900 dark:text-white text-xs sm:text-sm font-mono tracking-wider focus:ring-2 focus:ring-[#168A5B]"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
