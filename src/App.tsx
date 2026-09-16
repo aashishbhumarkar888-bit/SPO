@@ -37,29 +37,12 @@ import { notificationService } from './services/notificationService';
 import { eventBus } from './services/eventBus';
 import { initializeFirestoreData, saveFarmerToFirestore, saveTokenToFirestore } from './services/firestoreDbService';
 import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles, Volume2 } from 'lucide-react';
+import { useLanguage } from './contexts/LanguageContext';
 
 export default function App() {
+  const { language, setLanguage } = useLanguage();
   const [currentRole, setCurrentRole] = useState<AppRole>('landing');
   const [isSessionHydrating, setIsSessionHydrating] = useState<boolean>(true);
-  const [language, setLanguage] = useState<LanguageCode>(() => {
-    try {
-      const saved = localStorage.getItem('agriseva_language');
-      if (saved === 'hi' || saved === 'en' || saved === 'mr' || saved === 'pa') {
-        return saved as LanguageCode;
-      }
-    } catch {
-      // restricted environments
-    }
-    return 'hi';
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('agriseva_language', language);
-    } catch {
-      // restricted environments
-    }
-  }, [language]);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {

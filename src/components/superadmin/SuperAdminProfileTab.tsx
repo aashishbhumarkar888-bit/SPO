@@ -37,12 +37,6 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
   onToggleTheme,
   onLogout
 }) => {
-  const [currentPin, setCurrentPin] = useState('');
-  const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [pinChangeError, setPinChangeError] = useState<string | null>(null);
-  const [pinChangeSuccess, setPinChangeSuccess] = useState<string | null>(null);
-  const [isChangingPin, setIsChangingPin] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const adminName = session?.adminName || 'Sanjay V. Deshmukh, IAS';
@@ -54,44 +48,7 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
   const tokenExpiresAt = session?.tokenExpiresAt || '07:30 PM';
   const gatewaySession = session?.gatewaySession || 'MSAMB-SEC-892104';
 
-  const handleChangeMasterPin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPinChangeError(null);
-    setPinChangeSuccess(null);
 
-    if (currentPin.length < 6) {
-      setPinChangeError('Current Master Passphrase is incorrect.');
-      return;
-    }
-
-    if (newPin.length < 6) {
-      setPinChangeError('New Passphrase must be at least 6 characters');
-      return;
-    }
-
-    if (newPin !== confirmPin) {
-      setPinChangeError('New Passphrase and confirmation do not match');
-      return;
-    }
-
-    setIsChangingPin(true);
-    playAudioChime();
-    setTimeout(() => {
-      setIsChangingPin(false);
-      setPinChangeSuccess('Master Passphrase updated successfully. Propagated to NIC State Security Directory.');
-      setCurrentPin('');
-      setNewPin('');
-      setConfirmPin('');
-      auditLogger.log({
-        action: 'SUPER_ADMIN_PASSWORD_CHANGED',
-        actorRole: 'SUPER_ADMIN',
-        actorId: adminId,
-        targetEntity: 'StateGovernanceAuth',
-        targetId: gatewaySession,
-        description: `Administrator ${adminId} rotated governance credential`
-      });
-    }, 500);
-  };
 
   const handleConfirmLogout = () => {
     playAudioChime();
@@ -218,80 +175,7 @@ export const SuperAdminProfileTab: React.FC<SuperAdminProfileTabProps> = ({
         </div>
       </div>
 
-      {/* Change Master Passphrase */}
-      <div className="editorial-card rounded-2xl bg-white border border-[#D7E3DC] p-5 space-y-4 shadow-sm">
-        <div className="border-b border-[#E4EBE6] pb-3">
-          <h4 className="font-bold text-xs uppercase tracking-wider text-[#063B2A] flex items-center gap-1.5">
-            <KeyRound className="w-4 h-4 text-[#168A5B]" />
-            <span>Rotate Governance Passphrase</span>
-          </h4>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Cryptographic key for signing state-level MSP policy changes and emergency broadcasts
-          </p>
-        </div>
 
-        {pinChangeError && (
-          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{pinChangeError}</span>
-          </div>
-        )}
-
-        {pinChangeSuccess && (
-          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <span>{pinChangeSuccess}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleChangeMasterPin} className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div>
-            <label className="font-semibold text-slate-600 block mb-1">Current Passphrase</label>
-            <input
-              type="password"
-              value={currentPin}
-              onChange={e => setCurrentPin(e.target.value)}
-              placeholder="Current Passphrase"
-              required
-              className="w-full p-2.5 rounded-xl border border-[#D7E3DC] font-mono text-sm bg-white"
-            />
-          </div>
-
-          <div>
-            <label className="font-semibold text-slate-600 block mb-1">New Passphrase</label>
-            <input
-              type="password"
-              value={newPin}
-              onChange={e => setNewPin(e.target.value)}
-              placeholder="Min 6 characters"
-              required
-              className="w-full p-2.5 rounded-xl border border-[#D7E3DC] font-mono text-sm bg-white"
-            />
-          </div>
-
-          <div>
-            <label className="font-semibold text-slate-600 block mb-1">Confirm Passphrase</label>
-            <input
-              type="password"
-              value={confirmPin}
-              onChange={e => setConfirmPin(e.target.value)}
-              placeholder="Repeat new passphrase"
-              required
-              className="w-full p-2.5 rounded-xl border border-[#D7E3DC] font-mono text-sm bg-white"
-            />
-          </div>
-
-          <div className="sm:col-span-3 flex justify-end pt-2">
-            <button
-              type="submit"
-              disabled={isChangingPin}
-              className="px-5 py-2 rounded-xl bg-[#063B2A] hover:bg-[#0B5D3B] text-white text-xs font-bold transition-all shadow-xs active:scale-95"
-            >
-              {isChangingPin ? 'Updating Passphrase...' : 'Update Master Passphrase'}
-            </button>
-          </div>
-        </form>
-      </div>
 
       {/* Terminal Settings: Theme & Language */}
       <div className="editorial-card rounded-2xl bg-white border border-[#D7E3DC] p-5 space-y-4 shadow-sm">

@@ -400,30 +400,6 @@ export async function authenticateFarmerAsync(
     }
   }
 
-  // 2. Fallback check among the 4 comprehensive seeded farmers
-  const cleanVal = validation.cleanValue;
-  for (const acc of SEEDED_DEMO_ACCOUNTS) {
-    if (acc.role !== 'farmer' || !acc.profileReference) continue;
-
-    if (isDemoEnvironment()) {
-      const mobileClean = acc.identifiers.mobile.replace(/[\s-]/g, '');
-      const emailClean = acc.identifiers.email.toLowerCase();
-
-      const isMatch = 
-        (validation.type === 'aadhaar' && cleanVal.endsWith(acc.profileReference.aadhaarLast4)) ||
-        (validation.type === 'mobile' && (cleanVal === mobileClean || mobileClean.endsWith(cleanVal))) ||
-        (validation.type === 'email' && cleanVal === emailClean);
-
-      if (isMatch) {
-        return {
-          success: true,
-          farmer: acc.profileReference,
-          matchedIdentifierType: validation.type
-        };
-      }
-    }
-  }
-
   // No fabricated farmer fallback in production
   return {
     success: false,
@@ -460,33 +436,12 @@ export function authenticateFarmer(
     };
   }
 
-  const cleanVal = validation.cleanValue;
-  for (const acc of SEEDED_DEMO_ACCOUNTS) {
-    if (acc.role !== 'farmer' || !acc.profileReference) continue;
-
-    if (isDemoEnvironment()) {
-      const mobileClean = acc.identifiers.mobile.replace(/[\s-]/g, '');
-      const emailClean = acc.identifiers.email.toLowerCase();
-
-      const isMatch = 
-        (validation.type === 'aadhaar' && cleanVal.endsWith(acc.profileReference.aadhaarLast4)) ||
-        (validation.type === 'mobile' && (cleanVal === mobileClean || mobileClean.endsWith(cleanVal))) ||
-        (validation.type === 'email' && cleanVal === emailClean);
-
-      if (isMatch) {
-        return {
-          success: true,
-          farmer: acc.profileReference,
-          matchedIdentifierType: validation.type
-        };
-      }
-    }
-  }
-
+  // Synchronous version is deprecated for production.
+  // We return false here to force usage of authenticateFarmerAsync.
   return {
     success: false,
-    errorEn: 'Account not found. Please register at your nearest procurement center.',
-    errorHi: 'खाता नहीं मिला। कृपया अपने निकटतम उपार्जन केंद्र पर पंजीकरण करें।',
+    errorEn: 'Synchronous authentication is deprecated. Please use the secure async flow.',
+    errorHi: 'तुल्यकालिक प्रमाणीकरण अप्रचलित है। कृपया सुरक्षित असिंक्रोनस प्रवाह का उपयोग करें।',
     matchedIdentifierType: validation.type
   };
 }

@@ -37,12 +37,6 @@ export const SupervisorProfileTab: React.FC<SupervisorProfileTabProps> = ({
   onToggleTheme,
   onLogout
 }) => {
-  const [currentPin, setCurrentPin] = useState('');
-  const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [pinChangeError, setPinChangeError] = useState<string | null>(null);
-  const [pinChangeSuccess, setPinChangeSuccess] = useState<string | null>(null);
-  const [isChangingPin, setIsChangingPin] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Fallback defaults if session was initiated via URL parameter
@@ -58,44 +52,7 @@ export const SupervisorProfileTab: React.FC<SupervisorProfileTabProps> = ({
   const clearanceLevel = session?.clearanceLevel || 'LEVEL-2_MANDI_SUPERVISOR';
   const activeShift = session?.activeShift || 'Morning (08:00 - 14:00)';
 
-  const handleChangePin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPinChangeError(null);
-    setPinChangeSuccess(null);
 
-    if (currentPin.length < 4) {
-      setPinChangeError('Current Security PIN is incorrect.');
-      return;
-    }
-
-    if (newPin.length < 4) {
-      setPinChangeError('New PIN must be at least 4 digits');
-      return;
-    }
-
-    if (newPin !== confirmPin) {
-      setPinChangeError('New PIN and confirmation PIN do not match');
-      return;
-    }
-
-    setIsChangingPin(true);
-    playAudioChime();
-    setTimeout(() => {
-      setIsChangingPin(false);
-      setPinChangeSuccess('Terminal Security PIN updated successfully. Registered in Mandi Board Directory.');
-      setCurrentPin('');
-      setNewPin('');
-      setConfirmPin('');
-      auditLogger.log({
-        action: 'SUPERVISOR_PIN_CHANGED',
-        actorRole: 'SUPERVISOR',
-        actorId: supervisorId,
-        targetEntity: 'TerminalSecurity',
-        targetId: terminalId,
-        description: `Supervisor ${supervisorId} updated security PIN on terminal ${terminalId}`
-      });
-    }, 450);
-  };
 
   const handleConfirmLogout = () => {
     playAudioChime();
@@ -224,80 +181,7 @@ export const SupervisorProfileTab: React.FC<SupervisorProfileTabProps> = ({
         </div>
       </div>
 
-      {/* Security: Change Terminal PIN */}
-      <div className="editorial-card rounded-2xl bg-white border border-[#D7E3DC] p-5 space-y-4 shadow-sm">
-        <div className="border-b border-[#E4EBE6] pb-3">
-          <h4 className="font-bold text-xs uppercase tracking-wider text-[#063B2A] flex items-center gap-1.5">
-            <KeyRound className="w-4 h-4 text-[#168A5B]" />
-            <span>Change Terminal Security PIN</span>
-          </h4>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Update your local 4-digit station PIN for quick operator unlock during shift operations
-          </p>
-        </div>
 
-        {pinChangeError && (
-          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{pinChangeError}</span>
-          </div>
-        )}
-
-        {pinChangeSuccess && (
-          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <span>{pinChangeSuccess}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleChangePin} className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div>
-            <label className="font-semibold text-slate-600 block mb-1">Current PIN</label>
-            <input
-              type="password"
-              value={currentPin}
-              onChange={e => setCurrentPin(e.target.value)}
-              placeholder="Current PIN"
-              required
-              className="w-full p-2.5 rounded-xl border border-[#D7E3DC] font-mono text-sm bg-white"
-            />
-          </div>
-
-          <div>
-            <label className="font-semibold text-slate-600 block mb-1">New 4-Digit PIN</label>
-            <input
-              type="password"
-              value={newPin}
-              onChange={e => setNewPin(e.target.value)}
-              placeholder="e.g. 5678"
-              required
-              className="w-full p-2.5 rounded-xl border border-[#D7E3DC] font-mono text-sm bg-white"
-            />
-          </div>
-
-          <div>
-            <label className="font-semibold text-slate-600 block mb-1">Confirm New PIN</label>
-            <input
-              type="password"
-              value={confirmPin}
-              onChange={e => setConfirmPin(e.target.value)}
-              placeholder="Repeat new PIN"
-              required
-              className="w-full p-2.5 rounded-xl border border-[#D7E3DC] font-mono text-sm bg-white"
-            />
-          </div>
-
-          <div className="sm:col-span-3 flex justify-end pt-2">
-            <button
-              type="submit"
-              disabled={isChangingPin}
-              className="px-5 py-2 rounded-xl bg-[#063B2A] hover:bg-[#0B5D3B] text-white text-xs font-bold transition-all shadow-xs active:scale-95"
-            >
-              {isChangingPin ? 'Updating PIN...' : 'Update Terminal Security PIN'}
-            </button>
-          </div>
-        </form>
-      </div>
 
       {/* Terminal Settings: Theme & Language */}
       <div className="editorial-card rounded-2xl bg-white dark:bg-[#0E241C] border border-[#D7E3DC] dark:border-[#1D4334] p-5 space-y-4 shadow-sm">

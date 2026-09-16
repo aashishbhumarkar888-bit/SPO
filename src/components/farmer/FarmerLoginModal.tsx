@@ -23,8 +23,7 @@ import {
   authenticateFarmerAsync
 } from '../../services/authService';
 import { 
-  CURRENT_FARMER,
-  FARMER_REGISTRY
+  CURRENT_FARMER
 } from '../../data/agriMockData';
 import { FarmerProfile, LanguageCode } from '../../types';
 import { playAudioChime } from '../../utils/speech';
@@ -46,8 +45,8 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
   currentFarmer,
   onOpenRegistration
 }) => {
-  // Login modes: 'phone' | 'aadhaar' | 'email' | 'qr'
-  const [activeMode, setActiveMode] = useState<'phone' | 'aadhaar' | 'email' | 'qr'>('phone');
+  // Login modes: 'phone' | 'aadhaar' | 'email'
+  const [activeMode, setActiveMode] = useState<'phone' | 'aadhaar' | 'email'>('phone');
   const [identifierInput, setIdentifierInput] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -68,8 +67,7 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Send Mobile / Aadhaar OTP
-  const handleSendMobileOtp = () => {
+  const handleSendMobileOtp = async () => {
     const val = validateIdentifier(identifierInput);
     if (!val.isValid) {
       setInlineError({ en: val.errorEn, hi: val.errorHi });
@@ -77,14 +75,37 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
     }
     setInlineError(null);
     setIsSendingOtp(true);
+    setOtpNotice(null);
 
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/auth/send-mobile-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: identifierInput })
+      });
+      const data = await res.json();
+      setIsSendingOtp(false);
+
+      if (res.ok) {
+        setOtpSent(true);
+        setOtpCountdown(data.expiresInMinutes * 60 || 300);
+        setOtpNotice(
+          language === 'hi'
+            ? 'ओटीपी भेजा गया है।'
+            : 'Verification OTP sent.'
+        );
+        playAudioChime();
+        if (data.previewOtp) {
+          console.log('OTP Preview:', data.previewOtp);
+        }
+      } else {
+        setInlineError({ en: data.error, hi: data.error });
+      }
+    } catch {
       setIsSendingOtp(false);
       setOtpSent(true);
-      setOtpCountdown(30);
-      setOtpNotice(language === 'hi' ? 'ओटीपी भेजा गया है।' : 'Verification OTP sent.');
-      playAudioChime();
-    }, 400);
+      setOtpNotice('OTP delivery failed. Please retry.');
+    }
   };
 
   // Send Email SMTP OTP
@@ -182,17 +203,29 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const result = await authenticateFarmerAsync(identifierInput, otpCode);
-      setIsSubmitting(false);
+      const res = await fetch('/api/auth/verify-mobile-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: identifierInput, code: otpCode })
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        const result = await authenticateFarmerAsync(identifierInput, otpCode);
+        setIsSubmitting(false);
 
-      if (result.success && result.farmer) {
-        playAudioChime();
-        onLoginSuccess(result.farmer);
+        if (result.success && result.farmer) {
+          playAudioChime();
+          onLoginSuccess(result.farmer);
+        } else {
+          setInlineError({
+            en: result.errorEn || 'Account not found. Please register at your nearest procurement center.',
+            hi: result.errorHi || 'खाता नहीं मिला। कृपया अपने निकटतम उपार्जन केंद्र पर पंजीकरण करें।'
+          });
+        }
       } else {
-        setInlineError({
-          en: result.errorEn || 'Authentication failed. Please check your number/Aadhaar.',
-          hi: result.errorHi || 'प्रमाणीकरण विफल। कृपया अपने नंबर या आधार की पुष्टि करें।'
-        });
+        setIsSubmitting(false);
+        setInlineError({ en: data.error || 'Invalid OTP code', hi: 'अमान्य सत्यापन कोड' });
       }
     } catch {
       setIsSubmitting(false);
@@ -203,15 +236,6 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
     }
   };
 
-  // QR Smart Card instant authentication
-  const handleQrLogin = (farmer: FarmerProfile) => {
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      playAudioChime();
-      onLoginSuccess(farmer);
-    }, 400);
-  };
 
   return (
     <div 
@@ -273,8 +297,8 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
             </div>
           )}
 
-          {/* 4 Multi-Auth Mode Tabs */}
-          <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 dark:bg-[#143026] rounded-xl border border-slate-200 dark:border-[#2B5E4A] text-[11px] font-bold">
+          {/* 3 Multi-Auth Mode Tabs */}
+          <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-[#143026] rounded-xl border border-slate-200 dark:border-[#2B5E4A] text-[11px] font-bold">
             <button
               type="button"
               onClick={() => {
@@ -326,66 +350,10 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
               <span>{language === 'hi' ? 'ईमेल SMTP' : 'Email OTP'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setActiveMode('qr');
-                setInlineError(null);
-              }}
-              className={`py-2 px-1 rounded-lg transition-all flex flex-col items-center gap-1 cursor-pointer ${
-                activeMode === 'qr'
-                  ? 'bg-white dark:bg-[#063B2A] text-[#063B2A] dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              <QrCode className="w-3.5 h-3.5 text-purple-500" />
-              <span>{language === 'hi' ? 'क्यूआर कार्ड' : 'QR Card'}</span>
-            </button>
           </div>
 
-          {/* QR Code Scan Mode */}
-          {activeMode === 'qr' ? (
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#143026] border border-slate-200 dark:border-[#2B5E4A] text-center space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-white dark:bg-[#0E241C] border-2 border-dashed border-[#168A5B] flex items-center justify-center text-[#168A5B]">
-                <QrCode className="w-8 h-8 text-[#0B5D3B] dark:text-emerald-400 animate-pulse" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-slate-800 dark:text-white">
-                  {language === 'hi' ? 'स्मार्ट किसान कार्ड क्यूआर स्कैन' : 'Scan Smart Kisan Card QR'}
-                </h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {language === 'hi'
-                    ? 'अपने किसान कार्ड या मंडी पास का क्यूआर कोड प्रस्तुत करें।'
-                    : 'Present your Kisan ID pass or Mandi entry QR code for instant login.'}
-                </p>
-              </div>
-
-              {/* Sample QR Card One-Click Demo Logins */}
-              <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-[#2B5E4A]">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block">
-                  {language === 'hi' ? 'त्वरित क्यूआर कार्ड स्कैन टेस्ट:' : 'Quick QR Card Test:'}
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {FARMER_REGISTRY.slice(0, 2).map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => handleQrLogin(f)}
-                      className="p-2.5 rounded-xl bg-white dark:bg-[#0E241C] border border-slate-200 dark:border-[#2B5E4A] hover:border-emerald-500 text-left transition-all cursor-pointer flex items-center gap-2"
-                    >
-                      <QrCode className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                      <div className="truncate">
-                        <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">{f.fullName}</span>
-                        <span className="text-[10px] font-mono text-emerald-600">{f.kisanId}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Phone / Aadhaar / Email Form */
-            <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Phone / Aadhaar / Email Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
               
               {activeMode === 'email' ? (
                 /* Email Input */
@@ -478,9 +446,26 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
 
               {/* OTP Code Field */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#063B2A] dark:text-[#E2ECE6] block">
-                  {language === 'hi' ? 'सत्यापन कोड (OTP) *' : 'Verification Code (OTP) *'}
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#063B2A] dark:text-[#E2ECE6] block">
+                    {language === 'hi' ? 'सत्यापन कोड (OTP) *' : 'Verification Code (OTP) *'}
+                  </label>
+                  {otpSent && (
+                    <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400">
+                      {otpCountdown > 0 
+                        ? `${Math.floor(otpCountdown / 60)}:${(otpCountdown % 60).toString().padStart(2, '0')}`
+                        : (
+                          <button 
+                            type="button" 
+                            onClick={activeMode === 'email' ? handleSendEmailOtp : handleSendMobileOtp}
+                            className="text-[#168A5B] hover:text-[#0B5D3B] dark:hover:text-emerald-400 font-bold transition-colors cursor-pointer"
+                          >
+                            {language === 'hi' ? 'पुनः भेजें' : 'Resend OTP'}
+                          </button>
+                        )}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   maxLength={6}
@@ -514,7 +499,6 @@ export const FarmerLoginModal: React.FC<FarmerLoginModalProps> = ({
                 )}
               </button>
             </form>
-          )}
 
           {/* CREATE NEW ACCOUNT LINK */}
           <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-emerald-50 dark:from-[#1f382b] dark:to-[#143026] border border-amber-200 dark:border-[#2B5E4A] flex items-center justify-between gap-3 text-left">
