@@ -13,7 +13,15 @@ import {
   onSnapshot,
   serverTimestamp
 } from 'firebase/firestore';
-import { getAuth, signInAnonymously } from 'firebase/auth';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  type User as FirebaseUser 
+} from 'firebase/auth';
 
 // Import configuration generated from Firebase setup
 import firebaseConfigData from '../../firebase-applet-config.json';
@@ -34,7 +42,28 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app, firebaseConfigData.firestoreDatabaseId || '(default)');
 export const auth = getAuth(app);
 
-// Anonymous authentication to satisfy security rules and provide stable user session
+/**
+ * Sign in using Google OAuth with Firebase Auth Popup.
+ */
+export async function signInWithGoogle(): Promise<FirebaseUser> {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  const result = await signInWithPopup(auth, provider);
+  return result.user;
+}
+
+/**
+ * Signs out the current Firebase user.
+ */
+export async function signOutFromFirebase(): Promise<void> {
+  try {
+    await firebaseSignOut(auth);
+  } catch (error) {
+    console.warn('[Firebase Auth] Sign out notice:', error);
+  }
+}
+
+// Anonymous authentication fallback to satisfy security rules for public queries
 export async function ensureFirebaseAuth() {
   try {
     if (!auth.currentUser) {
@@ -42,7 +71,7 @@ export async function ensureFirebaseAuth() {
     }
     return auth.currentUser;
   } catch (error) {
-    console.warn('[Firebase Auth] Anonymous sign-in notice (running with resilient client fallback):', error);
+    console.warn('[Firebase Auth] Anonymous sign-in notice:', error);
     return null;
   }
 }
@@ -58,6 +87,8 @@ export {
   query, 
   where, 
   onSnapshot, 
-  serverTimestamp 
+  serverTimestamp,
+  onAuthStateChanged
 };
+export type { FirebaseUser };
 export default app;

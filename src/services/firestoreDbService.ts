@@ -9,7 +9,9 @@ import {
   addDoc, 
   query, 
   where,
-  serverTimestamp 
+  onSnapshot,
+  serverTimestamp,
+  type FirebaseUser
 } from './firebaseConfig';
 import { FarmerProfile, AgriToken } from '../types';
 import { 
@@ -335,5 +337,133 @@ export async function saveTokenToFirestore(token: AgriToken): Promise<boolean> {
   } catch (error) {
     console.warn('[Firestore] Failed to persist token:', error);
     return false;
+  }
+}
+
+/**
+ * Real-time listener for a farmer's tokens from Firestore.
+ */
+export function syncFarmerTokensFromFirestore(
+  farmerId: string,
+  onUpdate: (tokens: AgriToken[]) => void
+): () => void {
+  try {
+    const q = query(collection(db, 'tokens'), where('farmerId', '==', farmerId));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const tokens: AgriToken[] = [];
+      snapshot.forEach((doc) => {
+        tokens.push(doc.data() as AgriToken);
+      });
+      // Sort newest first
+      tokens.sort((a, b) => new Date(b.issueTimestamp || 0).getTime() - new Date(a.issueTimestamp || 0).getTime());
+      onUpdate(tokens);
+    }, (error) => {
+      console.warn('[Firestore] Realtime token subscription notice:', error);
+    });
+    return unsubscribe;
+  } catch (err) {
+    console.warn('[Firestore] Token listener setup failed:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Handles Google OAuth authenticated user: retrieves their profile from Firestore
+ * or creates a persistent farmer record linked to their Google account.
+ */
+export async function handleGoogleUserLogin(googleUser: FirebaseUser): Promise<FarmerProfile> {
+  try {
+    await ensureFirebaseAuth();
+    
+    // Check if doc exists with user.uid
+    const userDocRef = doc(db, 'farmers', googleUser.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+      return userDoc.data() as FarmerProfile;
+    }
+
+    // Check if email matches any existing farmer record
+    if (googleUser.email) {
+      const existing = await getFarmerByIdentifierFromFirestore('email', googleUser.email);
+      if (existing) {
+        // Link with uid and persist
+        const updated = { ...existing, id: googleUser.uid };
+        await setDoc(userDocRef, updated, { merge: true });
+        return updated;
+      }
+    }
+
+    // Create fresh authenticated farmer record in Firestore
+    const kisanId = 'KID-' + googleUser.uid.substring(0, 6).toUpperCase();
+    const newProfile: FarmerProfile = {
+      id: googleUser.uid,
+      kisanId,
+      aadhaarLast4: '****',
+      fullName: googleUser.displayName || 'Kisan Bandhu',
+      fullNameHi: googleUser.displayName || 'किसान बंधु',
+      phone: googleUser.phoneNumber || '',
+      email: googleUser.email || '',
+      village: 'Gram Sevagram',
+      villageHi: 'ग्राम सेवाग्राम',
+      district: 'Wardha',
+      state: 'Maharashtra',
+      bankAccount: '•••• •••• ' + Math.floor(1000 + Math.random() * 9000),
+      bankName: 'State Bank of India (Agri Division)',
+      ifsc: 'SBIN0001842',
+      pmKisanBeneficiary: true,
+      landParcels: [
+        {
+          id: 'PAR-G-' + googleUser.uid.substring(0, 4),
+          khasraNumber: '108/2-A',
+          areaAcres: 3.5,
+          cropSeason: 'Kharif',
+          primaryCrop: 'Soyabean (JS-9560)',
+          primaryCropHi: 'सोयाबीन (JS-9560)',
+          soilHealthCardId: 'SHC-MH-2026-G',
+          irrigationSource: 'Canal & Well'
+        }
+      ]
+    };
+
+    await setDoc(userDocRef, {
+      ...newProfile,
+      authProvider: 'google.com',
+      createdAt: new Date().toISOString()
+    });
+
+    return newProfile;
+  } catch (error) {
+    console.warn('[Firestore] Google user profile creation fallback:', error);
+    // Safe client fallback if firestore write has transient issue
+    return {
+      id: googleUser.uid,
+      kisanId: 'KID-' + googleUser.uid.substring(0, 6).toUpperCase(),
+      aadhaarLast4: '****',
+      fullName: googleUser.displayName || 'Kisan Bandhu',
+      fullNameHi: googleUser.displayName || 'किसान बंधु',
+      phone: googleUser.phoneNumber || '',
+      email: googleUser.email || '',
+      village: 'Gram Sevagram',
+      villageHi: 'ग्राम सेवाग्राम',
+      district: 'Wardha',
+      state: 'Maharashtra',
+      bankAccount: '•••• •••• 5590',
+      bankName: 'State Bank of India',
+      ifsc: 'SBIN0001842',
+      landParcels: [
+        {
+          id: 'PAR-FB-' + googleUser.uid.substring(0, 4),
+          khasraNumber: '108/2-A',
+          areaAcres: 3.5,
+          cropSeason: 'Kharif',
+          primaryCrop: 'Soyabean (JS-9560)',
+          primaryCropHi: 'सोयाबीन (JS-9560)',
+          soilHealthCardId: 'SHC-MH-2026-FB',
+          irrigationSource: 'Canal & Well'
+        }
+      ],
+      pmKisanBeneficiary: true
+    };
   }
 }

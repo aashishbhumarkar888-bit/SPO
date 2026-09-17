@@ -35,8 +35,15 @@ import { playAudioChime } from './utils/speech';
 import { TimeService } from './services/timeService';
 import { notificationService } from './services/notificationService';
 import { eventBus } from './services/eventBus';
-import { initializeFirestoreData, saveFarmerToFirestore, saveTokenToFirestore } from './services/firestoreDbService';
-import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles, Volume2 } from 'lucide-react';
+import { 
+  initializeFirestoreData, 
+  saveFarmerToFirestore, 
+  saveTokenToFirestore,
+  syncFarmerTokensFromFirestore
+} from './services/firestoreDbService';
+import { signOutFromFirebase } from './services/firebaseConfig';
+import { KrishiGeminiAssistant } from './components/ai/KrishiGeminiAssistant';
+import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles, Volume2, Bot, MapPin } from 'lucide-react';
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState<AppRole>(() => {
@@ -95,6 +102,7 @@ export default function App() {
   const [outdoorMode, setOutdoorMode] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
   const [isVoiceMitraOpen, setIsVoiceMitraOpen] = useState<boolean>(false);
+  const [isGeminiAssistantOpen, setIsGeminiAssistantOpen] = useState<boolean>(false);
 
   // Sync theme with document root
   useEffect(() => {
@@ -280,6 +288,7 @@ export default function App() {
   };
 
   const handleFarmerClearSessionAndLogout = () => {
+    signOutFromFirebase().catch(() => {});
     sessionStorage.clear();
     localStorage.removeItem('spo_supervisor_session');
     localStorage.removeItem('spo_superadmin_session');
@@ -451,6 +460,20 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('agriseva_tokens', JSON.stringify(tokens));
   }, [tokens]);
+
+  // Real-time Firestore sync for tokens belonging to the authenticated farmer
+  useEffect(() => {
+    if (farmer && farmer.id) {
+      const unsubscribe = syncFarmerTokensFromFirestore(farmer.id, (firestoreTokens) => {
+        if (firestoreTokens && firestoreTokens.length > 0) {
+          setTokens(firestoreTokens);
+        }
+      });
+      return () => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      };
+    }
+  }, [farmer?.id]);
 
   useEffect(() => {
     localStorage.setItem('agriseva_procurements', JSON.stringify(procurementRecords));
@@ -700,6 +723,7 @@ export default function App() {
             onOpenDemoDrawer={() => setIsSihDemoOpen(true)}
             onOpenRegistration={() => setIsFarmerRegistrationModalOpen(true)}
             onOpenVoiceMitra={() => setIsVoiceMitraOpen(true)}
+            onOpenGeminiAssistant={() => setIsGeminiAssistantOpen(true)}
             onLoginSuccess={handleFarmerLoginSuccess}
           />
         ) : null}
@@ -836,25 +860,47 @@ export default function App() {
         recentDbt={dbtTransactions[0]}
       />
 
-      {/* Floating Universal Voice Assistant Button (Always visible on all screens) */}
-      {!isVoiceMitraOpen && (
-        <div className="fixed bottom-20 sm:bottom-6 right-5 z-40">
+      {/* Floating Universal AI Assistant Buttons (Always visible on all screens) */}
+      <div className="fixed bottom-20 sm:bottom-6 right-5 z-40 flex items-center gap-2.5">
+        {!isGeminiAssistantOpen && (
+          <button
+            type="button"
+            onClick={() => setIsGeminiAssistantOpen(true)}
+            title="Ask Krishi Sahayak AI (कृषि सहायक AI - Gemini & Maps)"
+            className="h-12 sm:h-14 px-3.5 sm:px-4 rounded-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white shadow-2xl flex items-center gap-2 transition-all active:scale-95 border-2 border-white dark:border-[#0E241C] ring-4 ring-emerald-500/20 cursor-pointer"
+          >
+            <Bot className="w-5 h-5 text-amber-300" />
+            <span className="text-xs font-bold font-serif-display hidden sm:inline">
+              {language === 'hi' ? 'कृषि सहायक AI' : 'Krishi Sahayak AI'}
+            </span>
+          </button>
+        )}
+
+        {!isVoiceMitraOpen && (
           <button
             type="button"
             onClick={() => setIsVoiceMitraOpen(true)}
             title="Talk with Kisan Mitra (किसान मित्र आवाज)"
-            className="h-14 px-4 rounded-full bg-[#168A5B] hover:bg-[#12734C] text-white shadow-2xl flex items-center gap-2.5 transition-all active:scale-95 border-2 border-white dark:border-[#0E241C] ring-4 ring-[#168A5B]/20 cursor-pointer"
+            className="h-12 sm:h-14 px-3.5 sm:px-4 rounded-full bg-[#168A5B] hover:bg-[#12734C] text-white shadow-2xl flex items-center gap-2 transition-all active:scale-95 border-2 border-white dark:border-[#0E241C] ring-4 ring-[#168A5B]/20 cursor-pointer"
           >
             <div className="relative flex items-center">
               <Volume2 className="w-5 h-5 text-amber-300" />
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-[#083324]" />
             </div>
             <span className="text-xs font-bold font-serif-display hidden sm:inline">
-              {language === 'hi' ? 'किसान मित्र आवाज' : 'Kisan Voice AI'}
+              {language === 'hi' ? 'किसान आवाज' : 'Voice AI'}
             </span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Gemini Krishi Assistant & Google Maps Grounded Mandi Locator Modal */}
+      <KrishiGeminiAssistant
+        isOpen={isGeminiAssistantOpen}
+        onClose={() => setIsGeminiAssistantOpen(false)}
+        language={language}
+        defaultLocation={farmer?.district ? `${farmer.district}, Maharashtra` : 'Wardha, Maharashtra'}
+      />
 
       {/* Supervisor Secure Authentication Modal (Triggered by Ctrl+Shift+A or Operator Login) */}
       <SupervisorLoginModal
