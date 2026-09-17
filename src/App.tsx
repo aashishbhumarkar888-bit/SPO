@@ -176,6 +176,34 @@ export default function App() {
     setCurrentRole('farmer');
     sessionStorage.setItem('spo_farmer_session_active', 'true');
     localStorage.setItem('agriseva_farmer', JSON.stringify(newFarmer));
+
+    // Populate data for the active farmer session if currently empty
+    setTokens(prev => {
+      if (prev.length > 0) return prev;
+      const farmerTokens = INITIAL_TOKENS.filter(t => t.kisanId === newFarmer.kisanId);
+      return farmerTokens.length > 0 ? farmerTokens : [
+        {
+          ...INITIAL_TOKENS[0],
+          id: `TOK-${Date.now().toString().slice(-4)}`,
+          tokenNumber: `AS-${Math.floor(100 + Math.random() * 900)}`,
+          kisanId: newFarmer.kisanId,
+          farmerName: newFarmer.fullName,
+          farmerPhone: newFarmer.phone
+        }
+      ];
+    });
+
+    setProcurementRecords(prev => {
+      if (prev.length > 0) return prev;
+      const records = INITIAL_PROCUREMENT.filter(p => p.kisanId === newFarmer.kisanId);
+      return records.length > 0 ? records : INITIAL_PROCUREMENT.slice(0, 1);
+    });
+
+    setDbtTransactions(prev => {
+      if (prev.length > 0) return prev;
+      return DBT_TRANSACTIONS.slice(0, 2);
+    });
+
     playAudioChime();
     auditLogger.log({
       action: 'FARMER_AUTHENTICATED',
@@ -256,9 +284,15 @@ export default function App() {
     localStorage.removeItem('spo_supervisor_session');
     localStorage.removeItem('spo_superadmin_session');
     localStorage.removeItem('agriseva_farmer');
+    localStorage.removeItem('agriseva_tokens');
+    localStorage.removeItem('agriseva_procurements');
+    localStorage.removeItem('agriseva_dbt');
     const farmerName = farmer?.fullName || 'Farmer';
     const kisanId = farmer?.kisanId || 'GUEST';
     setFarmer(null);
+    setTokens([]);
+    setProcurementRecords([]);
+    setDbtTransactions([]);
     setSupervisorSession(null);
     setSuperAdminSession(null);
     setCurrentRole('landing');
@@ -366,18 +400,42 @@ export default function App() {
   });
 
   const [tokens, setTokens] = useState<AgriToken[]>(() => {
-    const saved = localStorage.getItem('agriseva_tokens');
-    return saved ? JSON.parse(saved) : INITIAL_TOKENS;
+    try {
+      const isFarmerActive = sessionStorage.getItem('spo_farmer_session_active') === 'true';
+      const isStaffActive = !!localStorage.getItem('spo_supervisor_session') || !!localStorage.getItem('spo_superadmin_session');
+      const saved = localStorage.getItem('agriseva_tokens');
+      if (saved) return JSON.parse(saved);
+      if (isFarmerActive || isStaffActive) return INITIAL_TOKENS;
+      return [];
+    } catch {
+      return [];
+    }
   });
 
   const [procurementRecords, setProcurementRecords] = useState<ProcurementRecord[]>(() => {
-    const saved = localStorage.getItem('agriseva_procurements');
-    return saved ? JSON.parse(saved) : INITIAL_PROCUREMENT;
+    try {
+      const isFarmerActive = sessionStorage.getItem('spo_farmer_session_active') === 'true';
+      const isStaffActive = !!localStorage.getItem('spo_supervisor_session') || !!localStorage.getItem('spo_superadmin_session');
+      const saved = localStorage.getItem('agriseva_procurements');
+      if (saved) return JSON.parse(saved);
+      if (isFarmerActive || isStaffActive) return INITIAL_PROCUREMENT;
+      return [];
+    } catch {
+      return [];
+    }
   });
 
   const [dbtTransactions, setDbtTransactions] = useState<DbtTransaction[]>(() => {
-    const saved = localStorage.getItem('agriseva_dbt');
-    return saved ? JSON.parse(saved) : DBT_TRANSACTIONS;
+    try {
+      const isFarmerActive = sessionStorage.getItem('spo_farmer_session_active') === 'true';
+      const isStaffActive = !!localStorage.getItem('spo_supervisor_session') || !!localStorage.getItem('spo_superadmin_session');
+      const saved = localStorage.getItem('agriseva_dbt');
+      if (saved) return JSON.parse(saved);
+      if (isFarmerActive || isStaffActive) return DBT_TRANSACTIONS;
+      return [];
+    } catch {
+      return [];
+    }
   });
 
   const [fleet, setFleet] = useState<MachineryAsset[]>(() => {

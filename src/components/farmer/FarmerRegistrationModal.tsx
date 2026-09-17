@@ -18,6 +18,7 @@ import {
 import { FarmerProfile, LanguageCode, LandParcel } from '../../types';
 import { playAudioChime } from '../../utils/speech';
 import { saveFarmerToFirestore } from '../../services/firestoreDbService';
+import { emailService } from '../../services/emailService';
 
 interface FarmerRegistrationModalProps {
   isOpen: boolean;
@@ -75,37 +76,24 @@ export const FarmerRegistrationModal: React.FC<FarmerRegistrationModalProps> = (
     setOtpNotice(null);
 
     try {
-      const res = await fetch('/api/auth/send-smtp-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, fullName: fullName || 'किसान भाई' })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setOtpSent(true);
-        if (data.previewOtp) {
-          setOtpNotice(
-            language === 'hi'
-              ? `ओटीपी कोड भेजा गया: ${data.previewOtp} (सत्यापन कोड)`
-              : `Verification code generated: ${data.previewOtp}`
-          );
-          setEmailOtp(data.previewOtp);
-        } else {
-          setOtpNotice(
-            language === 'hi'
-              ? 'सत्यापन कोड आपके ईमेल पर सफलतापूर्वक भेजा गया है।'
-              : 'Verification code dispatched to your email address.'
-          );
-        }
+      const data = await emailService.sendOtp(email, fullName || 'किसान भाई');
+      setOtpSent(true);
+      if (data.previewOtp) {
+        setOtpNotice(
+          language === 'hi'
+            ? `ओटीपी कोड: ${data.previewOtp} (सत्यापन कोड)`
+            : `Verification code: ${data.previewOtp}`
+        );
+        setEmailOtp(data.previewOtp);
       } else {
-        setErrorMsg(data.error || 'Failed to send OTP');
+        setOtpNotice(
+          language === 'hi'
+            ? 'सत्यापन कोड आपके ईमेल पर सफलतापूर्वक भेजा गया है।'
+            : 'Verification code dispatched to your email address.'
+        );
       }
     } catch (err: any) {
-      // Offline fallback
-      setOtpSent(true);
-      const fallbackOtp = '123456';
-      setEmailOtp(fallbackOtp);
-      setOtpNotice(`Offline OTP: ${fallbackOtp}`);
+      setErrorMsg(err.message || 'Failed to dispatch email verification code');
     } finally {
       setIsSendingOtp(false);
     }
@@ -120,26 +108,16 @@ export const FarmerRegistrationModal: React.FC<FarmerRegistrationModalProps> = (
     setErrorMsg(null);
 
     try {
-      const res = await fetch('/api/auth/verify-smtp-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: emailOtp })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await emailService.verifyOtp(email, emailOtp);
+      if (data.success) {
         setOtpVerified(true);
         playAudioChime();
         setOtpNotice(language === 'hi' ? 'ईमेल सफलतापूर्वक सत्यापित हो गया!' : 'Email successfully verified!');
       } else {
         setErrorMsg(data.error || 'Invalid OTP');
       }
-    } catch (err) {
-      if (emailOtp === '123456' || emailOtp === '1234') {
-        setOtpVerified(true);
-        setOtpNotice('Verified successfully');
-      } else {
-        setErrorMsg('Verification failed');
-      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Verification failed');
     }
   };
 

@@ -48,6 +48,15 @@ app.post('/api/auth/send-smtp-otp', async (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+
+    // Rate-limiting check: 60-second cooldown per email
+    const existingOtp = emailOtpStore.get(cleanEmail);
+    if (existingOtp && (existingOtp.expiresAt - 9 * 60 * 1000) > Date.now()) {
+      return res.status(429).json({
+        error: 'Please wait at least 60 seconds before requesting another verification code.'
+      });
+    }
+
     // Generate 6-digit numeric OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes validity
@@ -67,8 +76,9 @@ app.post('/api/auth/send-smtp-otp', async (req, res) => {
     const smtpPass = process.env.SMTP_PASS;
     const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
     const smtpFrom = process.env.SMTP_FROM || 'AgriSeva Mandi Portal <noreply@agriseva.gov.in>';
+    const isSmtpConfigured = Boolean(smtpHost && smtpUser && smtpPass);
 
-    if (smtpHost && smtpUser && smtpPass) {
+    if (isSmtpConfigured) {
       try {
         const transporter = nodemailer.createTransport({
           host: smtpHost,
@@ -110,18 +120,36 @@ app.post('/api/auth/send-smtp-otp', async (req, res) => {
     return res.json({
       success: true,
       message: smtpSent 
-        ? `Verification code dispatched to ${cleanEmail} via SMTP` 
+        ? `Verification code dispatched to ${cleanEmail} via secure SMTP` 
         : `Verification code generated for ${cleanEmail}`,
-      smtpConfigured: Boolean(smtpHost && smtpUser && smtpPass),
+      smtpConfigured: isSmtpConfigured,
       smtpDelivered: smtpSent,
-      // Provide demo/testing OTP in response if SMTP credentials are unconfigured or in preview sandbox
-      previewOtp: otpCode,
+      // Only include previewOtp in response if SMTP is NOT configured (for local dev sandbox)
+      previewOtp: isSmtpConfigured && smtpSent ? undefined : otpCode,
       expiresInMinutes: 10,
-      note: smtpSent ? undefined : 'SMTP credentials not configured in .env. Live OTP displayed for instant testing.'
+      note: smtpSent ? 'Securely delivered via SMTP' : 'SMTP credentials not configured in settings. Local test OTP provided.'
     });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
+});
+
+// API 2b: SMTP Health & Status Check
+app.get('/api/auth/smtp-status', (req, res) => {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+  const smtpFrom = process.env.SMTP_FROM || 'AgriSeva Mandi Portal <noreply@agriseva.gov.in>';
+
+  const configured = Boolean(smtpHost && smtpUser && smtpPass);
+
+  return res.json({
+    configured,
+    host: smtpHost ? `${smtpHost.substring(0, 3)}***` : undefined,
+    port: smtpPort,
+    sender: smtpFrom
+  });
 });
 
 // API 3: Verify SMTP OTP

@@ -19,7 +19,8 @@ import {
   UserPlus,
   Volume2,
   Sparkles,
-  LogIn
+  LogIn,
+  Mail
 } from 'lucide-react';
 import { FarmerProfile, LanguageCode } from '../../types';
 import { FARMER_REGISTRY } from '../../data/agriMockData';
@@ -237,49 +238,26 @@ export const PublicLandingGate: React.FC<PublicLandingGateProps> = ({
               </p>
             </div>
 
-            {/* Direct Quick 1-Click Profiles for Instant Access */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>{language === 'hi' ? 'त्वरित 1-क्लिक किसान लॉगिन:' : '1-Click Fast Farmer Login:'}</span>
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 gap-2">
-                {FARMER_REGISTRY.slice(0, 2).map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => {
-                      if (onLoginSuccess) {
-                        onLoginSuccess(f);
-                      } else {
-                        onOpenFarmerLogin();
-                      }
-                    }}
-                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50 dark:bg-[#143026] dark:hover:bg-[#1A3C2F] border border-slate-200 hover:border-emerald-500 dark:border-[#2B5E4A] text-left transition-all cursor-pointer flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                        {f.fullName.charAt(0)}
-                      </div>
-                      <div className="truncate">
-                        <span className="text-xs font-bold text-slate-900 dark:text-white block group-hover:text-emerald-700 dark:group-hover:text-emerald-300 truncate">
-                          {f.fullName}
-                        </span>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                          {f.kisanId} • {f.state}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded bg-emerald-100 dark:bg-emerald-950/60 flex items-center gap-1 flex-shrink-0">
-                      <span>{language === 'hi' ? 'लॉगिन' : 'Sign In'}</span>
-                      <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                    </span>
-                  </button>
-                ))}
-              </div>
+            {/* Citizen Authentication Methods Overview */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#143026] border border-slate-200 dark:border-[#2B5E4A] space-y-2">
+              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>{language === 'hi' ? 'सत्यापित प्रवेश माध्यम:' : 'Official Access Methods:'}</span>
+              </span>
+              <ul className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1.5 pl-1">
+                <li className="flex items-center gap-2">
+                  <Smartphone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                  <span>{language === 'hi' ? 'पंजीकृत मोबाइल नंबर पर त्वरित 4-अंकीय ओटीपी' : '4-Digit OTP on registered mobile number'}</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CreditCard className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                  <span>{language === 'hi' ? '12-अंकों का आधार नंबर और बायोमेट्रिक/ओटीपी सत्यापन' : '12-Digit Aadhaar authentication'}</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                  <span>{language === 'hi' ? 'सुरक्षित ईमेल ओटीपी (लाइव SMTP सत्यापन)' : 'Secure Email OTP (Live SMTP Relay)'}</span>
+                </li>
+              </ul>
             </div>
 
             <div className="flex flex-col gap-2 pt-1 border-t border-slate-100 dark:border-[#2B5E4A]">
