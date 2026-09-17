@@ -19,7 +19,6 @@ import { SupervisorLoginModal } from './components/supervisor/SupervisorLoginMod
 import { SuperAdminLoginModal } from './components/superadmin/SuperAdminLoginModal';
 import { FarmerLoginModal } from './components/farmer/FarmerLoginModal';
 import { FarmerRegistrationModal } from './components/farmer/FarmerRegistrationModal';
-import { KisanMitraVoiceModal } from './components/farmer/KisanMitraVoiceModal';
 import { SihDemoConsoleModal } from './components/demo/SihDemoConsoleModal';
 import { SihEvaluationInspector } from './components/common/SihEvaluationInspector';
 import { PublicLandingGate } from './components/common/PublicLandingGate';
@@ -101,7 +100,6 @@ export default function App() {
   });
   const [outdoorMode, setOutdoorMode] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
-  const [isVoiceMitraOpen, setIsVoiceMitraOpen] = useState<boolean>(false);
   const [isGeminiAssistantOpen, setIsGeminiAssistantOpen] = useState<boolean>(false);
 
   // Sync theme with document root
@@ -689,7 +687,7 @@ export default function App() {
             onOpenSuperAdminLogin={() => setIsSuperAdminModalOpen(true)}
             onOpenDemoDrawer={() => setIsSihDemoOpen(true)}
             onOpenRegistration={() => setIsFarmerRegistrationModalOpen(true)}
-            onOpenVoiceMitra={() => setIsVoiceMitraOpen(true)}
+            onOpenVoiceMitra={() => setIsGeminiAssistantOpen(true)}
             onLoginSuccess={handleFarmerLoginSuccess}
           />
         )}
@@ -703,9 +701,9 @@ export default function App() {
             language={language}
             isOffline={isOffline}
             onAddToken={handleAddToken}
-            onOpenVoiceMitra={() => setIsVoiceMitraOpen(true)}
-            isVoiceMitraOpen={isVoiceMitraOpen}
-            onCloseVoiceMitra={() => setIsVoiceMitraOpen(false)}
+            onOpenVoiceMitra={() => setIsGeminiAssistantOpen(true)}
+            isVoiceMitraOpen={false}
+            onCloseVoiceMitra={() => {}}
             onClearSessionAndLogout={handleFarmerClearSessionAndLogout}
             theme={theme}
             onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
@@ -722,7 +720,7 @@ export default function App() {
             onOpenSuperAdminLogin={() => setIsSuperAdminModalOpen(true)}
             onOpenDemoDrawer={() => setIsSihDemoOpen(true)}
             onOpenRegistration={() => setIsFarmerRegistrationModalOpen(true)}
-            onOpenVoiceMitra={() => setIsVoiceMitraOpen(true)}
+            onOpenVoiceMitra={() => setIsGeminiAssistantOpen(true)}
             onOpenGeminiAssistant={() => setIsGeminiAssistantOpen(true)}
             onLoginSuccess={handleFarmerLoginSuccess}
           />
@@ -849,56 +847,33 @@ export default function App() {
         }}
       />
 
-      {/* Universal Kisan Mitra Voice Assistant Modal (Visible & Accessible for everyone) */}
-      <KisanMitraVoiceModal
-        isOpen={isVoiceMitraOpen}
-        onClose={() => setIsVoiceMitraOpen(false)}
-        language={language}
-        activeToken={activeToken}
-        farmer={farmer || undefined}
-        recentProcurement={procurementRecords[0]}
-        recentDbt={dbtTransactions[0]}
-      />
-
-      {/* Floating Universal AI Assistant Buttons (Always visible on all screens) */}
+      {/* Floating Krishi Sahayak AI Assistant Button (One unified voice & intelligence AI) */}
       <div className="fixed bottom-20 sm:bottom-6 right-5 z-40 flex items-center gap-2.5">
         {!isGeminiAssistantOpen && (
           <button
             type="button"
             onClick={() => setIsGeminiAssistantOpen(true)}
-            title="Ask Krishi Sahayak AI (कृषि सहायक AI - Gemini & Maps)"
-            className="h-12 sm:h-14 px-3.5 sm:px-4 rounded-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white shadow-2xl flex items-center gap-2 transition-all active:scale-95 border-2 border-white dark:border-[#0E241C] ring-4 ring-emerald-500/20 cursor-pointer"
+            title="Ask Krishi Sahayak AI (कृषि सहायक AI - Voice & Gemini)"
+            className="h-12 sm:h-14 px-4 sm:px-5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white shadow-2xl flex items-center gap-2.5 transition-all active:scale-95 border-2 border-white dark:border-[#0E241C] ring-4 ring-emerald-500/20 cursor-pointer"
           >
             <Bot className="w-5 h-5 text-amber-300" />
-            <span className="text-xs font-bold font-serif-display hidden sm:inline">
-              {language === 'hi' ? 'कृषि सहायक AI' : 'Krishi Sahayak AI'}
-            </span>
-          </button>
-        )}
-
-        {!isVoiceMitraOpen && (
-          <button
-            type="button"
-            onClick={() => setIsVoiceMitraOpen(true)}
-            title="Talk with Kisan Mitra (किसान मित्र आवाज)"
-            className="h-12 sm:h-14 px-3.5 sm:px-4 rounded-full bg-[#168A5B] hover:bg-[#12734C] text-white shadow-2xl flex items-center gap-2 transition-all active:scale-95 border-2 border-white dark:border-[#0E241C] ring-4 ring-[#168A5B]/20 cursor-pointer"
-          >
-            <div className="relative flex items-center">
-              <Volume2 className="w-5 h-5 text-amber-300" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-[#083324]" />
-            </div>
-            <span className="text-xs font-bold font-serif-display hidden sm:inline">
-              {language === 'hi' ? 'किसान आवाज' : 'Voice AI'}
+            <span className="text-xs font-bold font-serif-display">
+              {language === 'hi' ? 'कृषि सहायक AI' : language === 'mr' ? 'कृषी सहाय्यक AI' : language === 'pa' ? 'ਕ੍ਰਿਸ਼ੀ ਸਹਾਇਕ AI' : 'Krishi Sahayak AI'}
             </span>
           </button>
         )}
       </div>
 
-      {/* Gemini Krishi Assistant & Google Maps Grounded Mandi Locator Modal */}
+      {/* Unified Krishi Sahayak AI Assistant (Voice + Grounded Gemini 3.5 & Maps) */}
       <KrishiGeminiAssistant
         isOpen={isGeminiAssistantOpen}
         onClose={() => setIsGeminiAssistantOpen(false)}
         language={language}
+        onLanguageChange={setLanguage}
+        farmer={farmer || undefined}
+        activeToken={activeToken}
+        recentProcurement={procurementRecords[0]}
+        recentDbt={dbtTransactions[0]}
         defaultLocation={farmer?.district ? `${farmer.district}, Maharashtra` : 'Wardha, Maharashtra'}
       />
 

@@ -121,27 +121,66 @@ export const FarmerRegistrationModal: React.FC<FarmerRegistrationModalProps> = (
     }
   };
 
-  // Step navigation validations
+  // Step navigation validations with thorough multi-language feedback
   const handleNextStep = () => {
     setErrorMsg(null);
     if (step === 1) {
-      if (!fullName.trim()) {
-        setErrorMsg(language === 'hi' ? 'कृपया अपना पूरा नाम दर्ज करें' : 'Please enter your full name');
+      if (!fullName.trim() || fullName.trim().length < 3) {
+        setErrorMsg(
+          language === 'hi' ? 'कृपया अपना पूरा नाम दर्ज करें (कम से कम 3 अक्षर)' :
+          language === 'mr' ? 'कृपया आपले पूर्ण नाव प्रविष्ट करा (किमान 3 अक्षरे)' :
+          language === 'pa' ? 'ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਪੂਰਾ ਨਾਮ ਦਰਜ ਕਰੋ (ਘੱਟੋ-ਘੱਟ 3 ਅੱਖਰ)' :
+          'Please enter your full name (minimum 3 characters)'
+        );
         return;
       }
       const cleanPhone = phone.replace(/\D/g, '');
-      if (cleanPhone.length < 10) {
-        setErrorMsg(language === 'hi' ? 'कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें' : 'Please enter a valid 10-digit phone number');
+      if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+        setErrorMsg(
+          language === 'hi' ? 'कृपया 10 अंकों का वैध भारतीय मोबाइल नंबर दर्ज करें (6, 7, 8 या 9 से प्रारंभ)' :
+          language === 'mr' ? 'कृपया 10 अंकी वैध मोबाईल नंबर प्रविष्ट करा' :
+          language === 'pa' ? 'ਕਿਰਪਾ ਕਰਕੇ 10 ਅੰਕਾਂ ਦਾ ਵੈਧ ਮੋਬਾਈਲ ਨੰਬਰ ਦਰਜ ਕਰੋ' :
+          'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9'
+        );
+        return;
+      }
+      if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        setErrorMsg(
+          language === 'hi' ? 'कृपया एक वैध ईमेल पता दर्ज करें' :
+          language === 'mr' ? 'कृपया वैध ईमेल पत्ता प्रविष्ट करा' :
+          language === 'pa' ? 'ਕਿਰਪਾ ਕਰਕੇ ਵੈਧ ਈਮੇਲ ਪਤਾ ਦਰਜ ਕਰੋ' :
+          'Please enter a valid email address'
+        );
         return;
       }
       setStep(2);
     } else if (step === 2) {
-      if (!village.trim()) {
-        setErrorMsg(language === 'hi' ? 'कृपया अपने गांव का नाम दर्ज करें' : 'Please enter your village name');
+      if (!village.trim() || village.trim().length < 2) {
+        setErrorMsg(
+          language === 'hi' ? 'कृपया अपने गांव का नाम दर्ज करें' :
+          language === 'mr' ? 'कृपया आपल्या गावाचे नाव प्रविष्ट करा' :
+          language === 'pa' ? 'ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੇ ਪਿੰਡ ਦਾ ਨਾਮ ਦਰਜ ਕਰੋ' :
+          'Please enter your village name'
+        );
         return;
       }
       if (!khasraNumber.trim()) {
-        setErrorMsg(language === 'hi' ? 'कृपया खसरा या 7/12 सर्वे संख्या दर्ज करें' : 'Please enter your Khasra / Survey number');
+        setErrorMsg(
+          language === 'hi' ? 'कृपया खसरा या 7/12 सर्वे संख्या दर्ज करें' :
+          language === 'mr' ? 'कृपया खसरा किंवा 7/12 गट नंबर प्रविष्ट करा' :
+          language === 'pa' ? 'ਕਿਰਪਾ ਕਰਕੇ ਖਸਰਾ ਜਾਂ ਸਰਵੇ ਨੰਬਰ ਦਰਜ ਕਰੋ' :
+          'Please enter your Khasra / Survey number'
+        );
+        return;
+      }
+      const acres = parseFloat(landAcres);
+      if (isNaN(acres) || acres <= 0) {
+        setErrorMsg(
+          language === 'hi' ? 'कृपया मान्य कृषि भूमि (एकड़) दर्ज करें' :
+          language === 'mr' ? 'कृपया वैध शेतजमीन (एकर) प्रविष्ट करा' :
+          language === 'pa' ? 'ਕਿਰਪਾ ਕਰਕੇ ਵੈਧ ਜ਼ਮੀਨ (ਏਕੜ) ਦਰਜ ਕਰੋ' :
+          'Please enter a valid land area in acres'
+        );
         return;
       }
       setStep(3);
@@ -154,12 +193,33 @@ export const FarmerRegistrationModal: React.FC<FarmerRegistrationModalProps> = (
     setErrorMsg(null);
 
     const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
-    if (cleanAadhaar.length < 12) {
-      setErrorMsg(language === 'hi' ? 'कृपया 12 अंकों का आधार नंबर दर्ज करें' : 'Please enter a 12-digit Aadhaar number');
+    if (cleanAadhaar.length !== 12) {
+      setErrorMsg(
+        language === 'hi' ? 'कृपया 12 अंकों का वैध आधार नंबर दर्ज करें' :
+        language === 'mr' ? 'कृपया 12 अंकी वैध आधार नंबर प्रविष्ट करा' :
+        language === 'pa' ? 'ਕਿਰਪਾ ਕਰਕੇ 12 ਅੰਕਾਂ ਦਾ ਵੈਧ ਆਧਾਰ ਨੰਬਰ ਦਰਜ ਕਰੋ' :
+        'Please enter a valid 12-digit Aadhaar number'
+      );
       return;
     }
-    if (!bankAccount.trim()) {
-      setErrorMsg(language === 'hi' ? 'कृपया बैंक खाता संख्या दर्ज करें' : 'Please enter bank account number');
+    const cleanBank = bankAccount.replace(/\D/g, '');
+    if (!cleanBank || cleanBank.length < 9 || cleanBank.length > 18) {
+      setErrorMsg(
+        language === 'hi' ? 'कृपया वैध बैंक खाता संख्या (9 से 18 अंक) दर्ज करें' :
+        language === 'mr' ? 'कृपया वैध बँक खाते क्रमांक (9 ते 18 अंक) प्रविष्ट करा' :
+        language === 'pa' ? 'ਕਿਰਪਾ ਕਰਕੇ ਵੈਧ ਬੈਂਕ ਖਾਤਾ ਨੰਬਰ (9 ਤੋਂ 18 ਅੰਕ) ਦਰਜ ਕਰੋ' :
+        'Please enter a valid bank account number (9 to 18 digits)'
+      );
+      return;
+    }
+    const cleanIfsc = ifsc.trim().toUpperCase();
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanIfsc)) {
+      setErrorMsg(
+        language === 'hi' ? 'कृपया 11-अक्षरों का वैध आईएफएससी (IFSC) कोड दर्ज करें (उदा. SBIN0001234)' :
+        language === 'mr' ? 'कृपया वैध 11-अक्षरी IFSC कोड प्रविष्ट करा' :
+        language === 'pa' ? 'ਕਿਰਪਾ ਕਰਕੇ ਵੈਧ 11-ਅੱਖਰੀ IFSC ਕੋਡ ਦਰਜ ਕਰੋ' :
+        'Please enter a valid 11-character IFSC code (e.g. SBIN0001234)'
+      );
       return;
     }
 
@@ -268,6 +328,31 @@ export const FarmerRegistrationModal: React.FC<FarmerRegistrationModalProps> = (
 
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           
+          {/* New Registration Advisory Banner */}
+          <div className="p-3.5 rounded-2xl bg-[#E7F7EF] dark:bg-[#153A2C] border border-[#98BFA9] dark:border-[#2B5E4A] flex items-start gap-2.5 text-xs text-[#0B5D3B] dark:text-[#A7D7C1]">
+            <ShieldCheck className="w-5 h-5 text-[#168A5B] flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-[#083324] dark:text-white">
+                {language === 'hi' 
+                  ? 'नया किसान पंजीकरण निर्देश:' 
+                  : language === 'mr' 
+                  ? 'नवीन शेतकरी नोंदणी सूचना:' 
+                  : language === 'pa' 
+                  ? 'ਨਵਾਂ ਕਿਸਾਨ ਰਜਿਸਟ੍ਰੇਸ਼ਨ ਨਿਰਦੇਸ਼:' 
+                  : 'New Farmer Registration Guidelines:'}
+              </p>
+              <p className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0] mt-0.5 leading-relaxed">
+                {language === 'hi'
+                  ? 'कृपया अपना सही व्यक्तिगत नाम, 10-अंकीय मोबाइल, खसरा / 7-12 सर्वे नंबर तथा 12-अंकीय आधार भरें। यह जानकारी सरकारी एमएसपी सत्यापन व सीधा डीबीटी भुगतान प्राप्त करने हेतु अनिवार्य है।'
+                  : language === 'mr'
+                  ? 'कृपया आपले अचूक नाव, १०-अंकी मोबाईल, खसरा/७-१२ गट नंबर आणि १२-अंकी आधार भरा. हमीभाव खरेदी व थेट डीबीटी खात्यात रक्कम मिळवण्यासाठी ही माहिती आवश्यक आहे.'
+                  : language === 'pa'
+                  ? 'ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਸਹੀ ਨਾਮ, 10-ਅੰਕੀ ਮੋਬਾਈਲ, ਖਸਰਾ ਨੰਬਰ ਅਤੇ 12-ਅੰਕੀ ਆਧਾਰ ਭਰੋ। ਇਹ ਜਾਣਕਾਰੀ ਐਮਐਸਪੀ ਅਤੇ ਡੀਬੀਟੀ ਭੁਗਤਾਨ ਲਈ ਲਾਜ਼ਮੀ ਹੈ।'
+                  : 'Please complete all fields accurately (Name, 10-digit mobile, Khasra land records & 12-digit Aadhaar). This information is strictly validated for government MSP procurement and direct DBT bank transfers.'}
+              </p>
+            </div>
+          </div>
+
           {errorMsg && (
             <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />

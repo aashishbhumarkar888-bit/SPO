@@ -334,12 +334,12 @@ export const PublicLandingGate: React.FC<PublicLandingGateProps> = ({
                 <ArrowRight className="w-4 h-4 text-emerald-300" />
               </button>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {onOpenRegistration && (
                   <button
                     type="button"
                     onClick={onOpenRegistration}
-                    className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/60 text-[#0B5D3B] dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/60 text-[#0B5D3B] dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <UserPlus className="w-3.5 h-3.5" />
                     <span className="truncate">{language === 'hi' ? 'नया पंजीकरण' : 'Register New'}</span>
@@ -350,21 +350,10 @@ export const PublicLandingGate: React.FC<PublicLandingGateProps> = ({
                   <button
                     type="button"
                     onClick={onOpenGeminiAssistant}
-                    className="py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <Bot className="w-3.5 h-3.5 text-amber-300" />
-                    <span className="truncate">{language === 'hi' ? 'कृषि सहायक AI' : 'Krishi Sahayak AI'}</span>
-                  </button>
-                )}
-
-                {onOpenVoiceMitra && (
-                  <button
-                    type="button"
-                    onClick={onOpenVoiceMitra}
-                    className="py-2 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Volume2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                    <span className="truncate">{language === 'hi' ? 'किसान आवाज AI' : 'Voice AI'}</span>
+                    <span className="truncate">{language === 'hi' ? 'कृषि सहायक AI' : language === 'mr' ? 'कृषी सहाय्यक AI' : language === 'pa' ? 'ਕ੍ਰਿਸ਼ੀ ਸਹਾਇਕ AI' : 'Krishi Sahayak AI'}</span>
                   </button>
                 )}
               </div>

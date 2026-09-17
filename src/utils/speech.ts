@@ -1,9 +1,10 @@
 /**
  * Voice synthesis and speech utilities for Kisan Command & Field Operations
- * Supports Web Speech API for Hindi and English announcements
+ * Supports Web Speech API for Hindi, English, Marathi, and Punjabi announcements
  */
+import { LanguageCode } from '../types';
 
-export function speakAnnouncement(text: string, lang: 'hi' | 'en' = 'hi'): Promise<boolean> {
+export function speakAnnouncement(text: string, lang: LanguageCode | 'hi' | 'en' | 'mr' | 'pa' = 'hi'): Promise<boolean> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       console.warn('Speech synthesis not supported on this browser.');
@@ -15,13 +16,30 @@ export function speakAnnouncement(text: string, lang: 'hi' | 'en' = 'hi'): Promi
       window.speechSynthesis.cancel(); // Cancel any previous speech
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95; // Slightly slower for clarity in rural field settings
+      utterance.rate = 0.92; // Clear pacing for clarity in rural and mandi environments
       utterance.pitch = 1.0;
-      utterance.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
+
+      let localeCode = 'hi-IN';
+      if (lang === 'en') localeCode = 'en-IN';
+      else if (lang === 'mr') localeCode = 'mr-IN';
+      else if (lang === 'pa') localeCode = 'pa-IN';
+      else localeCode = 'hi-IN';
+
+      utterance.lang = localeCode;
 
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
-        if (lang === 'hi') {
+        if (lang === 'mr') {
+          const marathiVoice = voices.find(v => v.lang.includes('mr') || v.lang.includes('Marathi'));
+          const hindiVoice = voices.find(v => v.lang.includes('hi') || v.lang.includes('Hindi'));
+          if (marathiVoice) utterance.voice = marathiVoice;
+          else if (hindiVoice) utterance.voice = hindiVoice;
+        } else if (lang === 'pa') {
+          const punjabiVoice = voices.find(v => v.lang.includes('pa') || v.lang.includes('Punjabi'));
+          const hindiVoice = voices.find(v => v.lang.includes('hi') || v.lang.includes('Hindi'));
+          if (punjabiVoice) utterance.voice = punjabiVoice;
+          else if (hindiVoice) utterance.voice = hindiVoice;
+        } else if (lang === 'hi') {
           const hindiVoice = voices.find(v => v.lang.includes('hi') || v.lang.includes('Hindi'));
           if (hindiVoice) utterance.voice = hindiVoice;
         } else {

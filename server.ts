@@ -269,7 +269,8 @@ app.post('/api/gemini/chat', async (req, res) => {
       messages, 
       model = 'gemini-3.5-flash', 
       systemInstruction, 
-      useMapsGrounding = false 
+      useMapsGrounding = false,
+      language = 'en'
     } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -302,9 +303,25 @@ app.post('/api/gemini/chat', async (req, res) => {
       parts: [{ text: String(m.content || m.text || '') }]
     }));
 
+    // Strict multi-language instructions based on user selection
+    let langDirective = '';
+    if (language === 'hi') {
+      langDirective = 'LANGUAGE MANDATE: You MUST formulate your entire response in clear, respectful HINDI (हिन्दी) in Devanagari script. Greet with "नमस्ते किसान भाई". Do not reply in English.';
+    } else if (language === 'mr') {
+      langDirective = 'LANGUAGE MANDATE: You MUST formulate your entire response in authentic, respectful MARATHI (मराठी) in Devanagari script. Greet with "नमस्कार शेतकरी बंधूंनो / जय बळीराजा". Do not reply in English or Hindi.';
+    } else if (language === 'pa') {
+      langDirective = 'LANGUAGE MANDATE: You MUST formulate your entire response in fluent, respectful PUNJABI (ਪੰਜਾਬੀ) in Gurmukhi script. Greet with "ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ ਕਿਸਾਨ ਵੀਰੋ". Do not reply in English or Hindi.';
+    } else {
+      langDirective = 'LANGUAGE MANDATE: Formulate your entire response in clear, accessible ENGLISH with appropriate Indian agricultural terminology (MSP, APMC, Quintal, Mandi).';
+    }
+
+    const baseInstruction = systemInstruction || 
+      'You are "Krishi Sahayak" (कृषि सहायक), the definitive AI Agricultural and Mandi Logistics Advisor for Indian farmers. You provide reliable guidance on MSP prices, slot pass issuance, mandi arrival schedules, moisture deductions, and crop health.';
+
+    const finalSystemInstruction = `${baseInstruction}\n\n${langDirective}`;
+
     const config: any = {
-      systemInstruction: systemInstruction || 
-        'You are "Krishi Sahayak" (कृषि सहायक), an expert AI Agricultural Advisor and Mandi Logistics Specialist for Indian farmers and APMC Mandi operations. Communicate respectfully in bilingual Hindi and English, providing clear, actionable guidance on crop procurement, slot booking, MSP minimum support prices, mandi queue management, and soil health.',
+      systemInstruction: finalSystemInstruction,
     };
 
     if (useMapsGrounding) {
@@ -341,20 +358,32 @@ app.post('/api/gemini/mandi-locator', async (req, res) => {
     const { 
       query: searchQuery, 
       location = 'Wardha, Maharashtra',
-      commodity = 'Soyabean'
+      commodity = 'Soyabean',
+      language = 'en'
     } = req.body;
 
     const ai = getGenAI();
 
+    let langDirective = '';
+    if (language === 'hi') {
+      langDirective = 'Format the textual summary in fluent HINDI (हिन्दी).';
+    } else if (language === 'mr') {
+      langDirective = 'Format the textual summary in fluent MARATHI (मराठी).';
+    } else if (language === 'pa') {
+      langDirective = 'Format the textual summary in fluent PUNJABI (ਪੰਜਾਬੀ).';
+    } else {
+      langDirective = 'Format the textual summary in clear English.';
+    }
+
     const prompt = searchQuery 
-      ? `Provide live, accurate geospatial information for: "${searchQuery}" in or near ${location}. List specific agricultural mandis, MSP purchase centres, FCI/CWC godowns, weighbridges, and APMC market yards with accurate address, approximate distance, operational timings, and commodities accepted.`
-      : `Find authorized APMC mandis, government MSP procurement centers, and agricultural warehousing facilities near ${location} handling ${commodity}. Provide their location details, road access, and key logistical advisories for farmers.`;
+      ? `Provide live, accurate geospatial information for: "${searchQuery}" in or near ${location}. List specific agricultural mandis, MSP purchase centres, FCI/CWC godowns, weighbridges, and APMC market yards with accurate address, approximate distance, operational timings, and commodities accepted. ${langDirective}`
+      : `Find authorized APMC mandis, government MSP procurement centers, and agricultural warehousing facilities near ${location} handling ${commodity}. Provide their location details, road access, and key logistical advisories for farmers. ${langDirective}`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
-        systemInstruction: 'You are an Indian agricultural logistics navigator specializing in geospatial verification of APMC Mandis, MSP procurement centers, state warehouses, and farmer weighbridge stations. Always use the Google Maps tool to ground your answers in verified location data.',
+        systemInstruction: `You are an Indian agricultural logistics navigator specializing in geospatial verification of APMC Mandis, MSP procurement centers, state warehouses, and farmer weighbridge stations. Always use the Google Maps tool to ground your answers in verified location data. ${langDirective}`,
         tools: [{ googleMaps: {} }]
       }
     });

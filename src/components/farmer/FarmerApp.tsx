@@ -34,12 +34,11 @@ import { FarmerBookingWizard } from './FarmerBookingWizard';
 import { FarmerLiveQueueView } from './FarmerLiveQueueView';
 import { FarmerCentresMapView } from './FarmerCentresMapView';
 import { FarmerCropPriceView } from './FarmerCropPriceView';
-import { FarmerVehicleTrackingView } from './FarmerVehicleTrackingView';
+import { FarmerBookVehicleView } from './FarmerBookVehicleView';
 import { FarmerProcurementView } from './FarmerProcurementView';
 import { FarmerDbtPassbookView } from './FarmerDbtPassbookView';
 import { FarmerProfileLandView } from './FarmerProfileLandView';
 import { FarmerHelpSupportView } from './FarmerHelpSupportView';
-import { KisanMitraVoiceModal } from './KisanMitraVoiceModal';
 import { MandiGateQrModal } from './MandiGateQrModal';
 import { SidebarFarmerGraphic } from '../common/AgriIllustrations';
 import { notificationService } from '../../services/notificationService';
@@ -142,9 +141,9 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
       icon: Wheat 
     },
     { 
-      id: 'tracking', 
-      labelHi: 'वाहन ट्रैकिंग', 
-      labelEn: 'Vehicle Tracking', 
+      id: 'book_vehicle', 
+      labelHi: 'वाहन बुक करें', 
+      labelEn: 'Book Vehicle', 
       icon: Truck 
     },
     { 
@@ -359,12 +358,12 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
             />
           )}
 
-          {/* 6. VEHICLE TRANSIT & GATE TRACKING */}
-          {activeTab === 'tracking' && (
-            <FarmerVehicleTrackingView
+          {/* 6. BOOK VEHICLE LOGISTICS VIEW */}
+          {activeTab === 'book_vehicle' && (
+            <FarmerBookVehicleView
               language={language}
+              farmer={farmer}
               activeToken={activeToken}
-              onOpenGatePassQr={() => setIsGateQrOpen(true)}
               onNavigateToTab={setActiveTab}
             />
           )}
@@ -435,39 +434,6 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
           })}
         </div>
       </nav>
-
-      {/* Floating Kisan Mitra Voice Assistant Button (With speech indicator) */}
-      <div className="fixed bottom-20 lg:bottom-8 right-5 z-40 flex items-center gap-2">
-        <div className="hidden sm:flex items-center px-3 py-1.5 rounded-full bg-white dark:bg-[#0E241C] border border-[#DCE7E1] dark:border-[#1D4334] text-xs font-bold text-[#062B1E] dark:text-[#F0FAF5] shadow-lg animate-bounce">
-          <span>{isHi ? 'आवाज से पूछें ➜' : 'Ask by Voice ➜'}</span>
-        </div>
-
-        <button
-          type="button"
-          onClick={onOpenVoiceMitra}
-          title="Talk with Kisan Mitra (किसान मित्र आवाज)"
-          className="h-14 px-4 rounded-full bg-[#168A5B] hover:bg-[#0B5D3B] text-white shadow-2xl flex items-center gap-2.5 transition-all active:scale-95 border-2 border-white dark:border-[#0E241C] ring-4 ring-[#168A5B]/30 cursor-pointer"
-        >
-          <div className="relative flex items-center">
-            <Volume2 className="w-5 h-5 text-amber-300" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-[#062B1E]" />
-          </div>
-          <span className="text-xs font-bold font-serif-display">
-            {isHi ? 'किसान मित्र ❯' : 'Kisan Mitra ❯'}
-          </span>
-        </button>
-      </div>
-
-      {/* Kisan Mitra Voice Assistant Modal */}
-      <KisanMitraVoiceModal
-        isOpen={isVoiceMitraOpen}
-        onClose={onCloseVoiceMitra}
-        language={language}
-        activeToken={activeToken}
-        farmer={farmer}
-        recentProcurement={procurementRecords[0]}
-        recentDbt={dbtTransactions[0]}
-      />
 
       {/* Mandi Gate Pass Digital QR Modal */}
       {activeToken && (

@@ -9,7 +9,6 @@ import {
   PhoneCall, 
   Building2,
   ShieldCheck,
-  Eye,
   User,
   LogOut,
   Home,
@@ -132,14 +131,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </div>
         </div>
 
-        {/* Center Slogan Banner (As shown in screenshot) */}
-        <div className="hidden xl:flex items-center justify-center">
-          <div className="px-4 py-1.5 rounded-full bg-[#083827] border border-[#168A5B]/40 text-xs font-semibold text-emerald-200 tracking-wide flex items-center gap-2">
-            <span>🌱</span>
-            <span>{isHi ? 'किसान का भरोसा • डिजिटल मंडी • समृद्ध भारत' : 'Trust of Farmer • Digital Mandi • Prosperous India'}</span>
-          </div>
-        </div>
-
         {/* Right Universal Actions: Toll-Free Pill, Notifications, Language, Profile */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           
@@ -183,19 +174,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <option value="pa" className="bg-[#062B1E] text-white">ਪੰਜਾਬੀ</option>
             </select>
           </div>
-
-          {/* Outdoor Sunlight Mode Toggle */}
-          <button
-            onClick={onToggleOutdoorMode}
-            title={outdoorMode ? t.outdoorModeActive : t.outdoorMode}
-            className={`p-2 rounded-xl text-xs font-semibold border transition-all hidden md:flex items-center justify-center ${
-              outdoorMode 
-                ? 'bg-amber-400 text-black border-black ring-2 ring-amber-500' 
-                : 'bg-[#083827] text-emerald-200 border-[#168A5B]/40 hover:bg-[#0C4E37]'
-            }`}
-          >
-            <Eye className="w-4 h-4 text-amber-400" />
-          </button>
 
           {/* Theme Toggle */}
           <button
