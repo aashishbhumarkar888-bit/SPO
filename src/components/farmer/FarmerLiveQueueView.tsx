@@ -70,28 +70,28 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
       )}
 
       {/* Official Government Digital E-Pass */}
-      <div className="bg-white dark:bg-[#0E241C] rounded-2xl border-2 border-[#168A5B] dark:border-[#22A872] overflow-hidden shadow-[0_8px_30px_rgba(6,59,42,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)] transition-colors">
-        {/* Pass Header Banner */}
-        <div className="bg-[#063B2A] dark:bg-[#081B13] text-white p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#0B5D3B] dark:border-[#153A2C]">
+      <div className="bg-white dark:bg-[#0E241C] rounded-2xl border-2 border-[#062B1E] dark:border-emerald-500/40 overflow-hidden shadow-lg transition-colors">
+        {/* Pass Header Banner (High Priority Rich Dark Green #062B1E) */}
+        <div className="bg-[#062B1E] dark:bg-[#051F15] text-white p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#0D4430]">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#22A872] animate-pulse"></span>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#DDF4E9]">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#A7F3D0]">
                 {t.digitalPassTitle}
               </span>
             </div>
             <h3 className="text-lg sm:text-xl font-bold text-white font-serif-display tracking-tight">
               {language === 'hi' && token.centreNameHi ? token.centreNameHi : token.centreName}
             </h3>
-            <p className="text-xs text-white/70 flex items-center gap-1 mt-0.5">
-              <MapPin className="w-3.5 h-3.5 text-[#22A872]" />
+            <p className="text-xs text-white/80 flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3.5 h-3.5 text-[#A7F3D0]" />
               <span>Wardha Central APMC Mandi Yard • Gate Inward #1</span>
             </p>
           </div>
 
           <div className="sm:text-right flex sm:flex-col items-baseline sm:items-end justify-between gap-2.5 bg-white/10 dark:bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-white/10">
             <div>
-              <span className="text-xs text-white/70 block">{t.tokenNumber}</span>
+              <span className="text-xs text-white/80 block">{t.tokenNumber}</span>
               <span className="text-3xl sm:text-4xl font-mono font-black text-amber-300 tracking-tight">
                 {token.tokenNumber}
               </span>
@@ -109,24 +109,25 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
           </div>
         </div>
 
-        {/* Pass Body Content */}
-        <div className="p-5 sm:p-6 space-y-6">
+        {/* Pass Body Content (Clean Neutral White Base) */}
+        <div className="p-5 sm:p-6 space-y-6 bg-white dark:bg-[#0E241C]">
           {/* Live Status & Counter Callout */}
-          <div className="p-4 sm:p-5 rounded-xl bg-[#F4F7F5] dark:bg-[#143026] border border-[#C7DCD1] dark:border-[#2B5E4A] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+          <div className="p-4 sm:p-5 rounded-xl bg-slate-50 dark:bg-[#143026] border border-slate-200 dark:border-[#2B5E4A] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
             <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-xl bg-[#063B2A] dark:bg-[#081B13] text-white flex items-center justify-center flex-shrink-0 shadow-sm border border-[#168A5B]/30">
+              <div className="w-12 h-12 rounded-xl bg-[#062B1E] text-white flex items-center justify-center flex-shrink-0 shadow-md border border-emerald-500/40">
                 <UserCheck className="w-6 h-6 text-emerald-400" />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="font-bold text-base text-[#063B2A] dark:text-[#F0FAF5] font-serif-display">
+                  <h4 className="font-bold text-base text-[#062B1E] dark:text-[#F0FAF5] font-serif-display">
                     {language === 'hi' ? statusMeta.labelHi : statusMeta.labelEn}
                   </h4>
-                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${statusMeta.badgeClass}`}>
+                  {/* High Priority Dark Green Status Badge */}
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-[#062B1E] text-white border border-emerald-500/40 shadow-xs">
                     {token.status}
                   </span>
                 </div>
-                <p className="text-xs text-[#2C5343] dark:text-[#85AFA0] mt-0.5">
+                <p className="text-xs text-[#335345] dark:text-[#85AFA0] mt-0.5">
                   {token.peopleAhead === 0 
                     ? (language === 'hi' ? 'आपकी बारी आ चुकी है! काउंटर पर रिपोर्ट करें।' : 'Your turn right now! Report to assigned counter.') 
                     : `${token.peopleAhead} ${t.peopleAheadLabel} • ~${token.estimatedWaitMins} min est. wait`}
@@ -135,27 +136,28 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
             </div>
 
             <div className="flex items-center gap-2 self-end sm:self-center">
-              <div className="px-3.5 py-2 rounded-xl bg-white dark:bg-[#0E241C] border border-[#C7DCD1] dark:border-[#2B5E4A] text-right shadow-xs">
-                <span className="text-[10px] text-[#57786B] dark:text-[#85AFA0] uppercase tracking-wider block font-bold">
+              {/* Counter Badge (Medium Priority Mint Green #D1EAE0 with Dark Green text) */}
+              <div className="px-3.5 py-2 rounded-xl bg-[#D1EAE0] dark:bg-[#143D2D] border border-[#A7F3D0] dark:border-[#2B5E4A] text-right shadow-xs">
+                <span className="text-[10px] text-[#062B1E] dark:text-[#A7F3D0] uppercase tracking-wider block font-bold">
                   {t.counterAssignedLabel}
                 </span>
-                <span className="text-sm font-bold text-[#063B2A] dark:text-[#F0FAF5] font-mono">
+                <span className="text-sm font-bold text-[#062B1E] dark:text-[#F0FAF5] font-mono">
                   Counter #{token.counterAssigned}
                 </span>
               </div>
               <button
                 onClick={handleAudioBroadcast}
-                className="p-2.5 rounded-xl bg-white dark:bg-[#0E241C] hover:bg-slate-100 dark:hover:bg-[#1A3C2F] border border-[#C7DCD1] dark:border-[#2B5E4A] text-[#0B5D3B] dark:text-[#6EE7B7] transition-all active:scale-95 shadow-xs"
+                className="p-2.5 rounded-xl bg-white dark:bg-[#0E241C] hover:bg-slate-100 dark:hover:bg-[#1A3C2F] border border-slate-200 dark:border-[#2B5E4A] text-[#062B1E] dark:text-[#6EE7B7] transition-all active:scale-95 shadow-xs"
                 title="Hear audio broadcast"
               >
-                <Volume2 className="w-5 h-5 text-[#168A5B] dark:text-[#22A872]" />
+                <Volume2 className="w-5 h-5 text-[#062B1E] dark:text-[#A7F3D0]" />
               </button>
             </div>
           </div>
 
-          {/* Stepper Timeline */}
+          {/* Stepper Timeline with Medium Priority Mint Green Highlights */}
           <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#063B2A] dark:text-[#F0FAF5]">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#062B1E] dark:text-[#F0FAF5]">
               {t.journeyTitle}
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -164,17 +166,17 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
                   key={idx}
                   className={`p-3 rounded-xl border text-center transition-all ${
                     st.current
-                      ? 'border-[#168A5B] dark:border-[#22A872] bg-[#DDF4E9] dark:bg-[#153A2C] ring-1 ring-[#168A5B]'
+                      ? 'border-2 border-[#062B1E] dark:border-[#22A872] bg-[#D1EAE0] dark:bg-[#153A2C] ring-2 ring-emerald-500/20'
                       : st.done
-                      ? 'border-[#E2ECE6] dark:border-[#1D4334] bg-[#F4F7F5] dark:bg-[#143026] text-[#063B2A] dark:text-[#F0FAF5]'
+                      ? 'border-slate-200 dark:border-[#1D4334] bg-slate-50 dark:bg-[#143026] text-[#062B1E] dark:text-[#F0FAF5]'
                       : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0A1C15] text-slate-400 opacity-60'
                   }`}
                 >
-                  <div className="text-xs font-bold mb-0.5 text-[#063B2A] dark:text-[#F0FAF5]">
+                  <div className="text-xs font-bold mb-0.5 text-[#062B1E] dark:text-[#F0FAF5]">
                     {st.done && !st.current ? '✓ ' : ''}
                     {st.title}
                   </div>
-                  <span className="text-[10px] font-bold text-[#57786B] dark:text-[#85AFA0]">
+                  <span className="text-[10px] font-bold text-[#062B1E] dark:text-[#85AFA0]">
                     {st.current ? t.currentStageBadge : st.done ? t.stageCompletedBadge : t.stagePendingBadge}
                   </span>
                 </div>
@@ -182,30 +184,30 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
             </div>
           </div>
 
-          {/* Key Identification Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 p-4 rounded-xl bg-[#F4F7F5] dark:bg-[#143026] border border-[#C7DCD1] dark:border-[#2B5E4A] text-xs transition-colors">
+          {/* Key Identification Grid (Clean Neutral White Base) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 p-4 rounded-xl bg-slate-50 dark:bg-[#143026] border border-slate-200 dark:border-[#2B5E4A] text-xs transition-colors">
             <div>
-              <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{language === 'hi' ? 'किसान का नाम' : 'Farmer'}</span>
-              <strong className="text-[#063B2A] dark:text-[#F0FAF5]">{language === 'hi' ? farmer.fullNameHi : farmer.fullName}</strong>
+              <span className="text-[#335345] dark:text-[#85AFA0] block font-semibold">{language === 'hi' ? 'किसान का नाम' : 'Farmer'}</span>
+              <strong className="text-[#062B1E] dark:text-[#F0FAF5]">{language === 'hi' ? farmer.fullNameHi : farmer.fullName}</strong>
             </div>
             <div>
-              <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{t.kisanId}</span>
-              <strong className="text-[#063B2A] dark:text-[#F0FAF5] font-mono">{farmer.kisanId}</strong>
+              <span className="text-[#335345] dark:text-[#85AFA0] block font-semibold">{t.kisanId}</span>
+              <strong className="text-[#062B1E] dark:text-[#F0FAF5] font-mono">{farmer.kisanId}</strong>
             </div>
             <div>
-              <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{t.cropLabel}</span>
-              <strong className="text-[#063B2A] dark:text-[#F0FAF5]">
+              <span className="text-[#335345] dark:text-[#85AFA0] block font-semibold">{t.cropLabel}</span>
+              <strong className="text-[#062B1E] dark:text-[#F0FAF5]">
                 {language === 'hi' && token.serviceDetails?.cropNameHi ? token.serviceDetails.cropNameHi : (token.serviceDetails?.cropName || 'Wheat')}
               </strong>
             </div>
             <div>
-              <span className="text-[#57786B] dark:text-[#85AFA0] block font-semibold">{t.slotTime}</span>
-              <strong className="text-[#063B2A] dark:text-[#F0FAF5] font-mono">{token.scheduledTime}</strong>
+              <span className="text-[#335345] dark:text-[#85AFA0] block font-semibold">{t.slotTime}</span>
+              <strong className="text-[#062B1E] dark:text-[#F0FAF5] font-mono">{token.scheduledTime}</strong>
             </div>
           </div>
 
           {/* QR & Barcode Section for Fast ANPR & Gate Entry */}
-          <div className="border-t border-[#E2ECE6] dark:border-[#1D4334] pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="border-t border-slate-200 dark:border-[#1D4334] pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <button
               type="button"
               onClick={() => setIsQrModalOpen(true)}
@@ -216,17 +218,17 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
                 <QrCode className="w-14 h-14 text-slate-900" />
               </div>
               <div className="text-xs space-y-0.5">
-                <p className="font-bold text-[#063B2A] dark:text-[#F0FAF5] flex items-center gap-1.5 font-serif-display">
+                <p className="font-bold text-[#062B1E] dark:text-[#F0FAF5] flex items-center gap-1.5 font-serif-display">
                   <span>Fast-Track ANPR Gate Barcode</span>
                   <Barcode className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                   <span className="text-[10px] bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 px-1.5 py-0.2 rounded font-mono">
                     {language === 'hi' ? 'क्लिक करें' : 'Click to View'}
                   </span>
                 </p>
-                <p className="text-[11px] text-[#2C5343] dark:text-[#85AFA0]">
+                <p className="text-[11px] text-[#335345] dark:text-[#85AFA0]">
                   {t.qrInstruction}
                 </p>
-                <p className="text-[10px] font-mono text-[#57786B] dark:text-[#85AFA0]">
+                <p className="text-[10px] font-mono text-[#335345] dark:text-[#85AFA0]">
                   AUTH-KEY: SPO-WHD-{token.tokenNumber}-{farmer.kisanId}
                 </p>
               </div>
@@ -244,15 +246,16 @@ export const FarmerLiveQueueView: React.FC<FarmerLiveQueueViewProps> = ({
 
               <a
                 href="tel:18001801551"
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-[#C7DCD1] dark:border-[#2B5E4A] hover:bg-white dark:hover:bg-[#1A3C2F] text-xs font-bold text-[#063B2A] dark:text-[#F0FAF5] flex items-center justify-center gap-1.5 transition-colors"
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-slate-200 dark:border-[#2B5E4A] hover:bg-slate-100 dark:hover:bg-[#1A3C2F] text-xs font-bold text-[#062B1E] dark:text-[#F0FAF5] flex items-center justify-center gap-1.5 transition-colors"
               >
-                <PhoneCall className="w-3.5 h-3.5 text-[#168A5B] dark:text-[#22A872]" />
+                <PhoneCall className="w-3.5 h-3.5 text-[#062B1E] dark:text-[#A7F3D0]" />
                 <span>{t.callSupportAction}</span>
               </a>
 
+              {/* Primary Action Button (High Priority Dark Green #062B1E) */}
               <button
                 onClick={() => onNavigateToTab('procurement')}
-                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-[#0B5D3B] hover:bg-[#063B2A] dark:bg-[#168A5B] dark:hover:bg-[#22A872] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 touch-target-48"
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-[#062B1E] hover:bg-[#042016] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 touch-target-48 border border-[#0D4430]"
               >
                 <span>{language === 'hi' ? 'तौल पर्ची स्थिति' : 'Procurement Slip'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />

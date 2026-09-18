@@ -191,19 +191,19 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fade-in">
-      {/* Official Terminal Header */}
-      <div className="bg-[#063B2A] text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-[#0B5D3B] shadow-md">
+      {/* Official Terminal Header (High Priority Dark Green #062B1E) */}
+      <div className="bg-[#062B1E] text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-[#0D4430] shadow-md">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#DDF4E9]">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#A7F3D0]">
               Official Operations Terminal • Kendra Console
             </span>
           </div>
           <h2 className="text-xl font-bold font-serif-display text-white">
             Wardha APMC Central Procurement Hub
           </h2>
-          <p className="text-xs text-white/70 mt-0.5">
+          <p className="text-xs text-white/80 mt-0.5">
             Operator: <strong>{session?.officerName || 'D. S. Kulkarni'}</strong> ({session?.supervisorId || 'SUP-WRD-01'}) • Station: {session?.terminalId || 'TERM-04'} • Shift Active
           </p>
         </div>
@@ -212,14 +212,14 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
           <div className="flex items-center gap-2 self-start sm:self-center">
             <button
               onClick={() => setActiveTab('profile')}
-              className="px-3.5 py-2 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded-xl border border-white/20 transition-all flex items-center gap-1.5"
+              className="px-3.5 py-2 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded-xl border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <User className="w-3.5 h-3.5 text-emerald-300" />
               <span>Station Profile</span>
             </button>
             <button
               onClick={onExit}
-              className="px-4 py-2 text-xs font-bold bg-red-600/80 hover:bg-red-600 text-white rounded-xl border border-red-500/50 transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+              className="px-4 py-2 text-xs font-bold bg-red-600/80 hover:bg-red-600 text-white rounded-xl border border-red-500/50 transition-all active:scale-95 flex items-center gap-1.5 shadow-sm cursor-pointer"
               title="Lock Terminal and Return to Public Portal"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -229,71 +229,76 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
         )}
       </div>
 
-      {/* Supervisor Top Operational Status Strip */}
+      {/* Supervisor Top Operational Status Strip (Clean Neutral White Base) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="editorial-card rounded-2xl p-4 border border-[#D7E3DC] bg-white">
-          <div className="flex items-center justify-between text-xs text-[#063B2A]/60 font-medium">
+        <div className="rounded-2xl p-4 border border-slate-200 dark:border-[#1D4334] bg-white dark:bg-[#0E241C] shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#335345] dark:text-[#CBE7DB] font-medium">
             <span>Live Tokens in Kendra</span>
-            <Users className="w-4 h-4 text-[#168A5B]" />
+            <Users className="w-4 h-4 text-[#062B1E] dark:text-[#A7F3D0]" />
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-bold font-mono-numbers text-[#063B2A]">
+            <span className="text-2xl font-bold font-mono text-[#062B1E] dark:text-[#F0FAF5]">
               {tokens.filter(t => t.status !== 'Completed').length}
             </span>
-            <span className="text-xs text-amber-700 font-semibold">Active Queue</span>
+            <span className="text-xs px-2 py-0.5 rounded-md bg-[#D1EAE0] dark:bg-[#143D2D] text-[#062B1E] dark:text-[#A7F3D0] font-bold border border-[#A7F3D0]">
+              Active Queue
+            </span>
           </div>
         </div>
 
-        <div className="editorial-card rounded-2xl p-4 border border-[#D7E3DC] bg-white">
-          <div className="flex items-center justify-between text-xs text-[#063B2A]/60 font-medium">
+        <div className="rounded-2xl p-4 border border-slate-200 dark:border-[#1D4334] bg-white dark:bg-[#0E241C] shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#335345] dark:text-[#CBE7DB] font-medium">
             <span>Weighbridge Inward Today</span>
-            <Scale className="w-4 h-4 text-[#D99121]" />
+            <Scale className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-bold font-mono-numbers text-[#063B2A]">
+            <span className="text-2xl font-bold font-mono text-[#062B1E] dark:text-[#F0FAF5]">
               {procurementRecords.reduce((acc, r) => acc + r.netWeightQuintals, 0).toFixed(1)}
             </span>
-            <span className="text-xs text-[#063B2A]/70">Quintals</span>
+            <span className="text-xs text-[#335345] dark:text-[#CBE7DB] font-semibold">Quintals</span>
           </div>
         </div>
 
-        <div className="editorial-card rounded-2xl p-4 border border-[#D7E3DC] bg-white">
-          <div className="flex items-center justify-between text-xs text-[#063B2A]/60 font-medium">
+        <div className="rounded-2xl p-4 border border-slate-200 dark:border-[#1D4334] bg-white dark:bg-[#0E241C] shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#335345] dark:text-[#CBE7DB] font-medium">
             <span>Fleet Deployed in Fields</span>
-            <Tractor className="w-4 h-4 text-[#2878C8]" />
+            <Tractor className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-bold font-mono-numbers text-[#063B2A]">
+            <span className="text-2xl font-bold font-mono text-[#062B1E] dark:text-[#F0FAF5]">
               {fleet.filter(f => f.status === 'In-Field' || f.status === 'Dispatched').length}/{fleet.length}
             </span>
-            <span className="text-xs text-emerald-700 font-semibold">Units Out</span>
+            <span className="text-xs px-2 py-0.5 rounded-md bg-[#D1EAE0] dark:bg-[#143D2D] text-[#062B1E] dark:text-[#A7F3D0] font-bold border border-[#A7F3D0]">
+              Units Out
+            </span>
           </div>
         </div>
 
-        <div className="editorial-card rounded-2xl p-4 border border-[#D7E3DC] bg-white">
-          <div className="flex items-center justify-between text-xs text-[#063B2A]/60 font-medium">
+        <div className="rounded-2xl p-4 border border-slate-200 dark:border-[#1D4334] bg-white dark:bg-[#0E241C] shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#335345] dark:text-[#CBE7DB] font-medium">
             <span>DBT Advice Generated</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <CheckCircle2 className="w-4 h-4 text-[#062B1E] dark:text-emerald-400" />
           </div>
           <div className="flex items-baseline gap-2 mt-2 flex-wrap">
-            <span className="text-2xl font-bold font-mono-numbers text-[#0B5D3B]">
+            <span className="text-2xl font-bold font-mono text-[#062B1E] dark:text-[#A7F3D0]">
               ₹{(procurementRecords.reduce((acc, r) => acc + r.totalGrossPayable, 0) / 100000).toFixed(1)}L
             </span>
-            <span className="text-xs text-emerald-700 font-semibold">PFMS Ready</span>
-            <IntegrationBadge status="INTEGRATION-READY" spec="PFMS" featureName="DBT Advice" featureId="AUD-06" />
+            <span className="text-xs px-2 py-0.5 rounded-md bg-[#062B1E] text-white font-bold border border-emerald-500/40">
+              PFMS Ready
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D7E3DC] pb-2">
-        <div className="flex items-center gap-1.5 p-1 bg-[#F0F5F2] rounded-xl border border-[#D7E3DC]">
+      {/* Sub-Navigation Tabs with High Priority Dark Green Active Tab */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-[#1D4334] pb-2">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-[#143D2D] rounded-xl border border-slate-200 dark:border-[#2B5E4A] flex-wrap">
           <button
             onClick={() => setActiveTab('queue')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'queue'
-                ? 'bg-[#168A5B] text-white shadow-xs'
-                : 'text-[#063B2A]/70 hover:text-[#063B2A]'
+                ? 'bg-[#062B1E] text-white shadow-md border border-[#0D4430]'
+                : 'text-[#062B1E] dark:text-[#CBE7DB] hover:bg-white/60 dark:hover:bg-[#0E241C]'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -302,10 +307,10 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
 
           <button
             onClick={() => setActiveTab('weighbridge')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'weighbridge'
-                ? 'bg-[#168A5B] text-white shadow-xs'
-                : 'text-[#063B2A]/70 hover:text-[#063B2A]'
+                ? 'bg-[#062B1E] text-white shadow-md border border-[#0D4430]'
+                : 'text-[#062B1E] dark:text-[#CBE7DB] hover:bg-white/60 dark:hover:bg-[#0E241C]'
             }`}
           >
             <Scale className="w-3.5 h-3.5" />
@@ -314,22 +319,22 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
 
           <button
             onClick={() => setActiveTab('excel-dashboard')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'excel-dashboard'
-                ? 'bg-[#0B5D3B] text-white shadow-xs'
-                : 'text-[#063B2A]/70 hover:text-[#063B2A]'
+                ? 'bg-[#062B1E] text-white shadow-md border border-[#0D4430]'
+                : 'text-[#062B1E] dark:text-[#CBE7DB] hover:bg-white/60 dark:hover:bg-[#0E241C]'
             }`}
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-amber-500" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-amber-300" />
             <span>{language === 'hi' ? 'एक्सेल ऑटो-डैशबोर्ड' : 'Dynamic Excel BI'}</span>
           </button>
 
           <button
             onClick={() => setActiveTab('fleet')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'fleet'
-                ? 'bg-[#168A5B] text-white shadow-xs'
-                : 'text-[#063B2A]/70 hover:text-[#063B2A]'
+                ? 'bg-[#062B1E] text-white shadow-md border border-[#0D4430]'
+                : 'text-[#062B1E] dark:text-[#CBE7DB] hover:bg-white/60 dark:hover:bg-[#0E241C]'
             }`}
           >
             <Tractor className="w-3.5 h-3.5" />
@@ -338,10 +343,10 @@ export const SupervisorConsole: React.FC<SupervisorConsoleProps> = ({
 
           <button
             onClick={() => setActiveTab('reports')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'reports'
-                ? 'bg-[#168A5B] text-white shadow-xs'
-                : 'text-[#063B2A]/70 hover:text-[#063B2A]'
+                ? 'bg-[#062B1E] text-white shadow-md border border-[#0D4430]'
+                : 'text-[#062B1E] dark:text-[#CBE7DB] hover:bg-white/60 dark:hover:bg-[#0E241C]'
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />

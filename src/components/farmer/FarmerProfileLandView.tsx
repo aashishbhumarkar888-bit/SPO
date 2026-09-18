@@ -98,39 +98,41 @@ export const FarmerProfileLandView: React.FC<FarmerProfileLandViewProps> = ({
         </div>
       </div>
 
-      {/* Kisan Card Identity (Light-First Surface) */}
-      <div className="rounded-2xl p-6 bg-white dark:bg-[#0E241C] border border-[#DCE7E1] dark:border-[#1D4334] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+      {/* Kisan Card Identity (Light-First Surface with Priority Colors) */}
+      <div className="rounded-2xl p-6 bg-white dark:bg-[#0E241C] border border-slate-200 dark:border-[#1D4334] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-[#083324] text-white flex items-center justify-center font-serif-display text-2xl font-bold shadow-sm flex-shrink-0">
+          <div className="w-16 h-16 rounded-2xl bg-[#062B1E] text-white flex items-center justify-center font-serif-display text-2xl font-bold shadow-md border border-[#0D4430] flex-shrink-0">
             {farmer.fullName.charAt(0)}
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-lg font-bold text-[#083324] dark:text-[#F0FAF5]">
+              <h3 className="text-lg font-bold text-[#062B1E] dark:text-[#F0FAF5]">
                 {language === 'hi' ? farmer.fullNameHi : farmer.fullName}
               </h3>
-              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#E7F7EF] text-[#0B5D3B] border border-[#98BFA9]">
+              {/* High Priority Dark Green Status Badge */}
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#062B1E] text-white border border-emerald-500/40 shadow-xs">
                 {t.ekycVerified}
               </span>
             </div>
-            <p className="text-xs text-[#4A6E5E] dark:text-[#85AFA0] font-mono mt-0.5">
+            <p className="text-xs text-[#335345] dark:text-[#85AFA0] font-mono mt-0.5">
               {t.kisanId}: <strong>{farmer.kisanId}</strong> • Aadhaar: <span className="font-mono">XXXX XXXX {farmer.aadhaarLast4}</span>
             </p>
-            <p className="text-xs text-[#4A6E5E] dark:text-[#85AFA0] mt-1 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#168A5B]" />
+            <p className="text-xs text-[#335345] dark:text-[#85AFA0] mt-1 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-[#062B1E] dark:text-[#A7F3D0]" />
               <span>{farmer.village}, Taluka Wardha, {farmer.state}</span>
             </p>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#F5F8F6] dark:bg-[#143026] border border-[#DCE7E1] dark:border-[#1D4334] text-center sm:text-right">
-          <span className="text-[11px] text-[#4A6E5E] dark:text-[#85AFA0] block font-semibold">
+        {/* Medium Priority Mint Green Land Summary Card */}
+        <div className="p-4 rounded-xl bg-[#D1EAE0] dark:bg-[#143D2D] border border-[#A7F3D0] dark:border-[#2B5E4A] text-center sm:text-right">
+          <span className="text-[11px] text-[#062B1E] dark:text-[#A7F3D0] block font-bold">
             {language === 'hi' ? 'कुल पंजीकृत भूमि' : 'Total Registered Land'}
           </span>
-          <span className="text-2xl font-mono font-bold text-[#083324] dark:text-[#F0FAF5]">
+          <span className="text-2xl font-mono font-bold text-[#062B1E] dark:text-[#F0FAF5]">
             {totalAcres} Acres
           </span>
-          <span className="text-[10px] text-[#0B5D3B] dark:text-[#6EE7B7] block mt-0.5 font-semibold">
+          <span className="text-[10px] text-[#062B1E] dark:text-[#A7F3D0] block mt-0.5 font-bold">
             Kharif Season Active
           </span>
         </div>

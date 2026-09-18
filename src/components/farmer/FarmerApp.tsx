@@ -161,7 +161,7 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAF8] dark:bg-[#071711] flex flex-col text-[#083324] dark:text-[#F0FAF5] selection:bg-[#E7F7EF] selection:text-[#083324] transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#071711] flex flex-col text-[#062B1E] dark:text-[#F0FAF5] selection:bg-[#D1EAE0] selection:text-[#062B1E] transition-colors duration-200">
       
       {/* Layout Container: Desktop Deep Forest Green Sidebar + Main Content */}
       <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col lg:flex-row pb-28 lg:pb-12">
@@ -196,7 +196,7 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
                     onClick={() => setActiveTab(item.id)}
                     className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-[#168A5B] text-white font-bold shadow-sm'
+                        ? 'bg-[#042016] text-white font-bold border-l-4 border-l-[#A7F3D0] shadow-sm ring-1 ring-emerald-500/30'
                         : 'text-emerald-100/80 hover:text-white hover:bg-[#0B3A29]'
                     }`}
                   >
@@ -293,7 +293,7 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab('booking')}
-                  className="px-6 py-3 rounded-xl bg-[#168A5B] hover:bg-[#0B5D3B] text-white text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                  className="px-6 py-3 rounded-xl bg-[#062B1E] hover:bg-[#042016] text-white text-xs sm:text-sm font-bold transition-all shadow-md active:scale-95 cursor-pointer border border-[#0D4430]"
                 >
                   {t.bookNewSlotButton}
                 </button>
@@ -305,15 +305,15 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
           {activeTab === 'booking' && (
             <div className="space-y-6 max-w-5xl mx-auto">
               {activeToken && (
-                <div className="p-4 sm:p-5 bg-white dark:bg-[#0E241C] rounded-2xl border border-[#DCE7E1] dark:border-[#2B5E4A] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+                <div className="p-4 sm:p-5 bg-white dark:bg-[#0E241C] rounded-2xl border border-slate-200 dark:border-[#2B5E4A] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
                   <div>
-                    <span className="text-[11px] font-bold text-[#168A5B] dark:text-[#34D399] uppercase tracking-wider block">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#D1EAE0] dark:bg-[#143D2D] text-[#062B1E] dark:text-[#A7F3D0] border border-[#A7F3D0] uppercase tracking-wider mb-1">
                       {isHi ? 'सक्रिय निर्धारित स्लॉट' : 'Active Scheduled Slot'}
                     </span>
-                    <h3 className="text-base font-bold text-[#083324] dark:text-[#F0FAF5] mt-0.5">
+                    <h3 className="text-base font-bold text-[#062B1E] dark:text-[#F0FAF5] mt-0.5">
                       {activeToken.tokenNumber} • {activeToken.serviceType}
                     </h3>
-                    <p className="text-xs text-[#4A6E5E] dark:text-[#85AFA0] mt-0.5">
+                    <p className="text-xs text-[#335345] dark:text-[#85AFA0] mt-0.5">
                       {isHi ? `परिचालन विंडो: ${activeToken.scheduledTime}` : `Scheduled Window: ${activeToken.scheduledTime}`}
                     </p>
                   </div>
@@ -321,7 +321,7 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveTab('queue')}
-                    className="px-5 py-2.5 text-xs font-bold rounded-xl bg-[#168A5B] hover:bg-[#0B5D3B] text-white flex items-center gap-1.5 self-start sm:self-center transition-all active:scale-95 shadow-xs"
+                    className="px-5 py-2.5 text-xs font-bold rounded-xl bg-[#062B1E] hover:bg-[#042016] text-white flex items-center gap-1.5 self-start sm:self-center transition-all active:scale-95 shadow-md border border-[#0D4430]"
                   >
                     <span>{t.actionViewPass}</span>
                     <ChevronRight className="w-4 h-4" />
@@ -417,7 +417,7 @@ export const FarmerApp: React.FC<FarmerAppProps> = ({
                 onClick={() => setActiveTab(item.id)}
                 className={`flex-shrink-0 min-w-[72px] sm:min-w-[84px] min-h-[50px] py-1.5 px-1.5 rounded-xl flex flex-col items-center justify-center gap-1 transition-all relative ${
                   isActive
-                    ? 'text-white font-bold bg-[#168A5B] shadow-xs'
+                    ? 'text-white font-bold bg-[#042016] border border-[#A7F3D0]/60 shadow-xs ring-1 ring-[#168A5B]'
                     : 'text-emerald-200/80 hover:text-white hover:bg-[#0B3A29]'
                 }`}
               >

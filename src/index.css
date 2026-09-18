@@ -7,27 +7,42 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Colors - Light-First Theme (Warm White / Light Sage & Deep Forest Green) */
-  --bg-canvas: #F4F7F5;
+  /* Colors - Light Theme Priority Hierarchy */
+  /* Low Priority / Base Backgrounds (Clean Neutral White / Slate-50) */
+  --bg-canvas: #F8FAFC;
   --bg-surface: #FFFFFF;
-  --bg-surface-subtle: #EDF4F0;
+  --bg-surface-subtle: #F1F5F9;
   --bg-surface-elevated: #FFFFFF;
-  --bg-surface-inset: #E5EFE9;
+  --bg-surface-inset: #E2E8F0;
   
-  --text-primary: #083324;
-  --text-secondary: #1F4A38;
-  --text-muted: #4A6E5E;
-  --text-subtle: #7A9B8D;
+  --text-primary: #062B1E;
+  --text-secondary: #0F3F2D;
+  --text-muted: #335345;
+  --text-subtle: #64748B;
   
-  --border-subtle: #DCE7E1;
-  --border-medium: #C2D8CD;
-  --border-strong: #98BFA9;
+  --border-subtle: #E2E8F0;
+  --border-medium: #CBD5E1;
+  --border-strong: #94A3B8;
 
-  --agri-deep: #083324;
+  /* Priority Encoding Tokens */
+  /* 1. High Priority (Deep Forest Dark Green #062B1E with crisp White text) */
+  --priority-high-bg: #062B1E;
+  --priority-high-hover: #042016;
+  --priority-high-text: #FFFFFF;
+  --priority-high-border: #0D4430;
+
+  /* 2. Medium Priority (Soft Mint Green #D1EAE0 / #A7F3D0 with Dark Green text #062B1E) */
+  --priority-medium-bg: #D1EAE0;
+  --priority-medium-hover: #BEE3D3;
+  --priority-medium-text: #062B1E;
+  --priority-medium-border: #A7F3D0;
+
+  /* Legacy & Semantic Bindings */
+  --agri-deep: #062B1E;
   --agri-forest: #0B5D3B;
-  --agri-primary: #168A5B;
-  --agri-mint: #E7F7EF;
-  --agri-mint-text: #0B5D3B;
+  --agri-primary: #062B1E;
+  --agri-mint: #D1EAE0;
+  --agri-mint-text: #062B1E;
 
   --accent-blue: #1D68BD;
   --accent-blue-bg: #EFF6FF;
@@ -49,17 +64,18 @@
   --accent-red-border: #FECACA;
   --accent-red-text: #991B1B;
 
-  --shadow-subtle: 0 1px 3px rgba(8, 51, 36, 0.04);
-  --shadow-card: 0 2px 8px -1px rgba(8, 51, 36, 0.05);
-  --shadow-hover: 0 8px 20px -4px rgba(8, 51, 36, 0.08);
+  --shadow-subtle: 0 1px 3px rgba(6, 43, 30, 0.04);
+  --shadow-card: 0 2px 8px -1px rgba(6, 43, 30, 0.05);
+  --shadow-hover: 0 8px 20px -4px rgba(6, 43, 30, 0.08);
 
   --font-serif: 'Fraunces', Georgia, serif;
   --font-sans: 'Plus Jakarta Sans', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Dark Theme (Obsidian Forest & Luminous Mineral Green) */
+/* Dark Theme Priority Hierarchy */
 .dark {
+  /* Low Priority / Base Backgrounds (Obsidian Canvas & Crisp Elevated Surfaces) */
   --bg-canvas: #071711;
   --bg-surface: #0E241C;
   --bg-surface-subtle: #143026;
@@ -67,7 +83,7 @@
   --bg-surface-inset: #0A1C15;
 
   --text-primary: #F0FAF5;
-  --text-secondary: #BBDCD0;
+  --text-secondary: #D1EAE0;
   --text-muted: #85AFA0;
   --text-subtle: #567C6E;
 
@@ -75,9 +91,20 @@
   --border-medium: #2B5E4A;
   --border-strong: #3D7E64;
 
-  --agri-deep: #0E241C;
+  /* Priority Encoding Tokens in Dark Theme */
+  --priority-high-bg: #062B1E;
+  --priority-high-hover: #042016;
+  --priority-high-text: #FFFFFF;
+  --priority-high-border: #168A5B;
+
+  --priority-medium-bg: #143D2D;
+  --priority-medium-hover: #1A4D39;
+  --priority-medium-text: #A7F3D0;
+  --priority-medium-border: #2B5E4A;
+
+  --agri-deep: #062B1E;
   --agri-forest: #168A5B;
-  --agri-primary: #22A872;
+  --agri-primary: #10B981;
   --agri-mint: #153A2C;
   --agri-mint-text: #6EE7B7;
 
@@ -142,6 +169,65 @@ body {
   border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-card);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Priority Hierarchy Classes */
+/* High Priority: Rich Deep Forest Dark Green (#062B1E) */
+.priority-high-btn {
+  background-color: #062B1E;
+  color: #FFFFFF;
+  border: 1px solid #0D4430;
+  transition: all 0.15s ease;
+}
+.priority-high-btn:hover {
+  background-color: #042016;
+}
+.dark .priority-high-btn {
+  background-color: #062B1E;
+  color: #FFFFFF;
+  border: 1px solid #168A5B;
+}
+.dark .priority-high-btn:hover {
+  background-color: #0B3A29;
+}
+
+.priority-high-badge {
+  background-color: #062B1E;
+  color: #FFFFFF;
+  border: 1px solid rgba(22, 138, 91, 0.4);
+}
+
+/* Medium Priority: Soft Mint Green (#D1EAE0 / #A7F3D0) */
+.priority-medium-badge {
+  background-color: #D1EAE0;
+  color: #062B1E;
+  border: 1px solid #A7F3D0;
+}
+.dark .priority-medium-badge {
+  background-color: #143D2D;
+  color: #A7F3D0;
+  border: 1px solid #2B5E4A;
+}
+
+.priority-medium-card {
+  background-color: #D1EAE0;
+  color: #062B1E;
+  border: 1px solid #A7F3D0;
+}
+.dark .priority-medium-card {
+  background-color: #143D2D;
+  color: #F0FAF5;
+  border: 1px solid #2B5E4A;
+}
+
+/* Low Priority / Base Background: Clean Neutral White */
+.card-neutral-white {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+}
+.dark .card-neutral-white {
+  background-color: #0E241C;
+  border: 1px solid #1D4334;
 }
 
 .theme-card-hover:hover {

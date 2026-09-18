@@ -23,7 +23,12 @@ import {
   Mail,
   Bot,
   MapPin,
-  RefreshCw
+  RefreshCw,
+  Ticket,
+  QrCode,
+  Zap,
+  Check,
+  ChevronRight
 } from 'lucide-react';
 import { FarmerProfile, LanguageCode } from '../../types';
 import { FARMER_REGISTRY } from '../../data/agriMockData';
@@ -60,6 +65,9 @@ export const PublicLandingGate: React.FC<PublicLandingGateProps> = ({
   // Google sign in state
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
+
+  // Interactive Procurement Workflow Step State (For SIH Jury Inspection)
+  const [activeWorkflowStep, setActiveWorkflowStep] = useState<number>(1);
 
   // Secret Key Prompt State
   const [isSecretKeyPromptOpen, setIsSecretKeyPromptOpen] = useState(false);
@@ -362,50 +370,285 @@ export const PublicLandingGate: React.FC<PublicLandingGateProps> = ({
         </div>
       </div>
 
-      {/* SECTION 2: TRANSPARENT PROCUREMENT WORKFLOW */}
-      <div className="w-full bg-white dark:bg-[#0E241C] border border-[#D7E3DC] dark:border-[#2B5E4A] rounded-2xl p-5 shadow-xs">
-        <h3 className="text-sm font-bold text-[#063B2A] dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-          <CalendarCheck className="w-4 h-4 text-[#168A5B]" />
-          <span>{language === 'hi' ? 'पारदर्शी डिजिटल उपार्जन प्रक्रिया' : 'Transparent Procurement Workflow'}</span>
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-3.5 rounded-xl bg-[#F0F5F2] dark:bg-[#143026] border border-[#D7E3DC] dark:border-[#2B5E4A] space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[#168A5B] text-white text-xs font-bold flex items-center justify-center">1</span>
-              <h4 className="text-xs font-bold text-[#063B2A] dark:text-white">
-                {language === 'hi' ? 'स्लॉट व ई-टोकन' : 'Slot Booking & Token'}
-              </h4>
+      {/* SECTION 2: INTERACTIVE HORIZONTAL WORKFLOW PROGRESS BAR (SIH Jury Evaluation) */}
+      <div className="w-full bg-white/80 dark:bg-[#0E241C]/80 backdrop-blur-md border border-[#D7E3DC] dark:border-[#2B5E4A] hover:border-emerald-500/40 rounded-3xl p-5 sm:p-7 shadow-sm hover:shadow-md transition-all space-y-6">
+        
+        {/* Header with status pill and interactive step badge */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-[#2B5E4A] pb-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#0B5D3B] dark:text-[#6EE7B7] text-xs font-bold border border-emerald-300 dark:border-emerald-800 shadow-2xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{language === 'hi' ? 'स्मार्ट इंडिया हैकाथॉन • पारदर्शी डिजिटल श्रृंखला' : 'SIH 2026 • 100% Transparent Digital Procurement'}</span>
             </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-300">
-              {language === 'hi' ? 'फसल, वजन व तारीख चुनें और डिजिटल गेट पास प्राप्त करें।' : 'Select crop, estimated weight, and receive digital gate pass.'}
-            </p>
+            <h3 className="text-base sm:text-xl font-bold text-[#062B1E] dark:text-white flex items-center gap-2 font-serif-display">
+              <CalendarCheck className="w-5 h-5 text-[#168A5B]" />
+              <span>{language === 'hi' ? 'पारदर्शी डिजिटल उपार्जन कार्यप्रवाह' : 'Transparent Procurement Workflow'}</span>
+            </h3>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#F0F5F2] dark:bg-[#143026] border border-[#D7E3DC] dark:border-[#2B5E4A] space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[#168A5B] text-white text-xs font-bold flex items-center justify-center">2</span>
-              <h4 className="text-xs font-bold text-[#063B2A] dark:text-white">
-                {language === 'hi' ? 'धर्मकांटा व नमी परीक्षण' : 'Weighbridge & Quality QC'}
-              </h4>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#062B1E] dark:text-emerald-300 font-semibold hidden sm:inline">
+              {language === 'hi' ? 'क्लिक करके चरण जाँचें:' : 'Click step to inspect:'}
+            </span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EAF8F0] dark:bg-[#143026] border border-[#C2E8D2] dark:border-[#2B5E4A] text-xs font-bold text-[#0B5D3B] dark:text-[#6EE7B7]">
+              <CheckCircle2 className="w-4 h-4 text-[#168A5B]" />
+              <span>Phase {activeWorkflowStep} of 3</span>
             </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-300">
-              {language === 'hi' ? 'इलेक्ट्रॉनिक कांटा द्वारा निष्पक्ष सकल व तौल वजन मापन।' : 'Electronic gross & tare weighing with instant moisture analysis.'}
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-[#F0F5F2] dark:bg-[#143026] border border-[#D7E3DC] dark:border-[#2B5E4A] space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[#168A5B] text-white text-xs font-bold flex items-center justify-center">3</span>
-              <h4 className="text-xs font-bold text-[#063B2A] dark:text-white">
-                {language === 'hi' ? 'सीधा डीबीटी भुगतान' : 'Direct DBT Transfer'}
-              </h4>
-            </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-300">
-              {language === 'hi' ? 'PFMS / NPCI के माध्यम से एमएसपी राशि सीधे आधार लिंक बैंक खाते में।' : 'MSP procurement amount transferred directly to bank account via PFMS.'}
-            </p>
           </div>
         </div>
+
+        {/* Horizontal Step-Progress Indicator Track */}
+        <div className="relative pt-2 pb-1">
+          {/* Connecting Track Line */}
+          <div className="hidden md:block absolute top-7 left-12 right-12 h-1 bg-slate-200 dark:bg-[#1C4436] rounded-full z-0">
+            {/* Animated Active Progress Fill */}
+            <div 
+              className="h-full bg-gradient-to-r from-[#168A5B] via-emerald-500 to-teal-500 rounded-full transition-all duration-500 shadow-sm"
+              style={{ width: activeWorkflowStep === 1 ? '16%' : activeWorkflowStep === 2 ? '50%' : '100%' }}
+            />
+          </div>
+
+          {/* 3 Horizontal Interactive Step Cards with Status Icons */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+            
+            {/* Step 1: Slot & Pass */}
+            <button
+              type="button"
+              onClick={() => setActiveWorkflowStep(1)}
+              className={`p-4 sm:p-5 rounded-2xl text-left transition-all border cursor-pointer min-h-[120px] flex flex-col justify-between ${
+                activeWorkflowStep === 1
+                  ? 'bg-emerald-50/90 dark:bg-[#143026] border-[#168A5B] dark:border-emerald-400 shadow-md ring-2 ring-emerald-500/25'
+                  : 'bg-white/80 dark:bg-[#0E241C]/60 border-slate-200 dark:border-[#204738] hover:border-emerald-300 hover:bg-white'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs transition-colors ${
+                      activeWorkflowStep === 1 
+                        ? 'bg-[#168A5B] text-white' 
+                        : 'bg-slate-100 dark:bg-[#1E4334] text-slate-700 dark:text-emerald-300'
+                    }`}>
+                      <Ticket className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#168A5B] dark:text-emerald-400 block">
+                        {language === 'hi' ? 'चरण 1 • आगमन' : 'Step 1 • Arrival'}
+                      </span>
+                      <h4 className="text-sm font-bold text-[#062B1E] dark:text-white">
+                        {language === 'hi' ? '1. स्लॉट व ई-पास' : '1. Slot & Pass'}
+                      </h4>
+                    </div>
+                  </div>
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    activeWorkflowStep >= 1 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    1
+                  </span>
+                </div>
+                <p className="text-xs text-[#083324] dark:text-slate-200 leading-relaxed font-medium">
+                  {language === 'hi' 
+                    ? 'फसल, वजन व तारीख चुनें और डिजिटल गेट पास व लाइव क्यूआर टोकन प्राप्त करें।' 
+                    : 'Select crop, estimated weight, and receive digital QR gate pass.'}
+                </p>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-emerald-900/10 dark:border-emerald-500/20 flex items-center justify-between text-[11px] font-bold text-[#168A5B] dark:text-emerald-400">
+                <span className="flex items-center gap-1">
+                  <QrCode className="w-3.5 h-3.5" />
+                  {language === 'hi' ? 'QR गेट सत्यापन' : 'QR Gate Pass'}
+                </span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </button>
+
+            {/* Step 2: Weighbridge QC */}
+            <button
+              type="button"
+              onClick={() => setActiveWorkflowStep(2)}
+              className={`p-4 sm:p-5 rounded-2xl text-left transition-all border cursor-pointer min-h-[120px] flex flex-col justify-between ${
+                activeWorkflowStep === 2
+                  ? 'bg-emerald-50/90 dark:bg-[#143026] border-[#168A5B] dark:border-emerald-400 shadow-md ring-2 ring-emerald-500/25'
+                  : 'bg-white/80 dark:bg-[#0E241C]/60 border-slate-200 dark:border-[#204738] hover:border-emerald-300 hover:bg-white'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs transition-colors ${
+                      activeWorkflowStep === 2 
+                        ? 'bg-[#168A5B] text-white' 
+                        : 'bg-slate-100 dark:bg-[#1E4334] text-slate-700 dark:text-emerald-300'
+                    }`}>
+                      <Scale className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#168A5B] dark:text-emerald-400 block">
+                        {language === 'hi' ? 'चरण 2 • तौल व ग्रेड' : 'Step 2 • Weigh & QC'}
+                      </span>
+                      <h4 className="text-sm font-bold text-[#062B1E] dark:text-white">
+                        {language === 'hi' ? '2. धर्मकांटा व QC' : '2. Weighbridge QC'}
+                      </h4>
+                    </div>
+                  </div>
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    activeWorkflowStep >= 2 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    2
+                  </span>
+                </div>
+                <p className="text-xs text-[#083324] dark:text-slate-200 leading-relaxed font-medium">
+                  {language === 'hi' 
+                    ? 'इलेक्ट्रॉनिक कांटा द्वारा निष्पक्ष सकल व तौल वजन मापन एवं डिजिटल नमी ग्रेडिंग।' 
+                    : 'Electronic gross & tare weighing with instant moisture QC analysis.'}
+                </p>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-emerald-900/10 dark:border-emerald-500/20 flex items-center justify-between text-[11px] font-bold text-[#168A5B] dark:text-emerald-400">
+                <span className="flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5" />
+                  {language === 'hi' ? '50 MT डिजिटल कांटा' : 'IoT 50 MT Scale'}
+                </span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </button>
+
+            {/* Step 3: Direct DBT Transfer */}
+            <button
+              type="button"
+              onClick={() => setActiveWorkflowStep(3)}
+              className={`p-4 sm:p-5 rounded-2xl text-left transition-all border cursor-pointer min-h-[120px] flex flex-col justify-between ${
+                activeWorkflowStep === 3
+                  ? 'bg-emerald-50/90 dark:bg-[#143026] border-[#168A5B] dark:border-emerald-400 shadow-md ring-2 ring-emerald-500/25'
+                  : 'bg-white/80 dark:bg-[#0E241C]/60 border-slate-200 dark:border-[#204738] hover:border-emerald-300 hover:bg-white'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs transition-colors ${
+                      activeWorkflowStep === 3 
+                        ? 'bg-[#168A5B] text-white' 
+                        : 'bg-slate-100 dark:bg-[#1E4334] text-slate-700 dark:text-emerald-300'
+                    }`}>
+                      <Banknote className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#168A5B] dark:text-emerald-400 block">
+                        {language === 'hi' ? 'चरण 3 • भुगतान' : 'Step 3 • Payout'}
+                      </span>
+                      <h4 className="text-sm font-bold text-[#062B1E] dark:text-white">
+                        {language === 'hi' ? '3. सीधा डीबीटी भुगतान' : '3. Direct DBT Transfer'}
+                      </h4>
+                    </div>
+                  </div>
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    activeWorkflowStep === 3 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    3
+                  </span>
+                </div>
+                <p className="text-xs text-[#083324] dark:text-slate-200 leading-relaxed font-medium">
+                  {language === 'hi' 
+                    ? 'PFMS / NPCI के माध्यम से एमएसपी राशि सीधे आधार लिंक बैंक खाते में 48 घंटे में।' 
+                    : 'MSP procurement amount transferred directly to bank account via PFMS.'}
+                </p>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-emerald-900/10 dark:border-emerald-500/20 flex items-center justify-between text-[11px] font-bold text-[#168A5B] dark:text-emerald-400">
+                <span className="flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-amber-500" />
+                  {language === 'hi' ? 'तत्काल बैंक क्रेडिट' : 'Instant 48h DBT'}
+                </span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Interactive Step Details Inspector (For Jury Inspection) */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 dark:bg-[#143026]/90 border border-slate-200/80 dark:border-[#2B5E4A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {activeWorkflowStep === 1 && (
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-[#168A5B] flex items-center justify-center font-bold flex-shrink-0">
+                <Ticket className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-[#062B1E] dark:text-white">
+                    {language === 'hi' ? 'सत्यापित स्लॉट व कतार प्रबंधन प्रणाली' : 'Verified Slot & Anti-Congestion Queue'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
+                    {language === 'hi' ? 'शून्य शारीरिक कतार' : 'Zero Physical Queues'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-300">
+                  {language === 'hi'
+                    ? 'किसान घर बैठे मोबाइल से मंडी स्लॉट चुनते हैं। गेट पर QR कोड स्कैन करते ही ऑटोमैटिक इनवर्ड पर्ची व वाहन टोकन जारी होता है।'
+                    : 'Farmers book slots from home. Scanning QR pass at mandi gate immediately confirms entry, allocates weighbridge lane, and issues vehicle token.'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeWorkflowStep === 2 && (
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold flex-shrink-0">
+                <Scale className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-[#062B1E] dark:text-white">
+                    {language === 'hi' ? '50 MT डिजिटल धर्मकांटा व ऑटोमेटेड QC' : 'IoT 50 MT Electronic Weighbridge & QC'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300">
+                    {language === 'hi' ? 'छेड़छाड़-मुक्त तौल' : 'Anti-Tamper Auto Scale'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-300">
+                  {language === 'hi'
+                    ? 'वाहन का सकल (Gross) व खाली (Tare) वजन डिजिटल स्केल से सीधा सर्वर पर रिकॉर्ड होता है। नमी परीक्षण (<12%) के आधार पर तत्काल डिजिटल तौल पर्ची तैयार होती है।'
+                    : 'Gross and tare weights stream directly from IoT scales without manual intervention. Moisture content (<12%) is verified for fair procurement.'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeWorkflowStep === 3 && (
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 flex items-center justify-center font-bold flex-shrink-0">
+                <Zap className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-[#062B1E] dark:text-white">
+                    {language === 'hi' ? 'सीधा PFMS / NPCI बैंक खाता हस्तांतरण' : 'Direct PFMS / NPCI Bank Transfer'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
+                    {language === 'hi' ? '0% बिचौलिया कटौती' : '0% Middlemen Cut'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-300">
+                  {language === 'hi'
+                    ? 'स्वीकृत उपज का सम्पूर्ण एमएसपी भुगतान सीधे आधार लिंक बैंक खाते में स्थानांतरित होता है। किसान को तुरंत एसएमएस एवं डिजिटल रसीद मिलती है।'
+                    : 'Direct MSP payments routed straight to Aadhaar-linked accounts via PFMS within 48 hours, complete with instant SMS receipts.'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Action Button within the Workflow Bar */}
+          <button
+            type="button"
+            onClick={onOpenFarmerLogin}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#0B5D3B] hover:bg-[#063B2A] text-white text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1.5 flex-shrink-0 cursor-pointer min-h-[44px]"
+          >
+            <Smartphone className="w-4 h-4 text-amber-300" />
+            <span>{language === 'hi' ? 'अभी प्रक्रिया शुरू करें' : 'Start Workflow'}</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
       </div>
 
       {/* SECTION 3: STRICTLY GATED DEPARTMENTAL ACCESS (Hidden until Secret Keys entered) */}

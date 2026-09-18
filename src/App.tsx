@@ -42,7 +42,7 @@ import {
 } from './services/firestoreDbService';
 import { signOutFromFirebase } from './services/firebaseConfig';
 import { KrishiGeminiAssistant } from './components/ai/KrishiGeminiAssistant';
-import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles, Volume2, Bot, MapPin } from 'lucide-react';
+import { ShieldCheck, PhoneCall, Building2, Lock, Sparkles, Volume2, Bot, MapPin, Mic } from 'lucide-react';
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState<AppRole>(() => {
@@ -650,7 +650,7 @@ export default function App() {
     : undefined;
 
   return (
-    <div className={`min-h-screen bg-[#F4F7F5] dark:bg-[#071711] text-[#063B2A] dark:text-[#F0FAF5] flex flex-col transition-colors duration-200 ${outdoorMode ? 'outdoor-contrast-mode' : ''}`}>
+    <div className={`min-h-screen bg-slate-50 dark:bg-[#071711] text-[#062B1E] dark:text-[#F0FAF5] flex flex-col transition-colors duration-200 ${outdoorMode ? 'outdoor-contrast-mode' : ''}`}>
       {/* Public Header (Strictly Farmer/Citizen-focused, no role switcher) */}
       <AppHeader
         language={language}
@@ -848,19 +848,45 @@ export default function App() {
       />
 
       {/* Floating Krishi Sahayak AI Assistant Button (One unified voice & intelligence AI) */}
-      <div className="fixed bottom-20 sm:bottom-6 right-5 z-40 flex items-center gap-2.5">
+      <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 flex items-center gap-2.5">
         {!isGeminiAssistantOpen && (
-          <button
-            type="button"
-            onClick={() => setIsGeminiAssistantOpen(true)}
-            title="Ask Krishi Sahayak AI (कृषि सहायक AI - Voice & Gemini)"
-            className="h-12 sm:h-14 px-4 sm:px-5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white shadow-2xl flex items-center gap-2.5 transition-all active:scale-95 border-2 border-white dark:border-[#0E241C] ring-4 ring-emerald-500/20 cursor-pointer"
-          >
-            <Bot className="w-5 h-5 text-amber-300" />
-            <span className="text-xs font-bold font-serif-display">
-              {language === 'hi' ? 'कृषि सहायक AI' : language === 'mr' ? 'कृषी सहाय्यक AI' : language === 'pa' ? 'ਕ੍ਰਿਸ਼ੀ ਸਹਾਇਕ AI' : 'Krishi Sahayak AI'}
-            </span>
-          </button>
+          <div className="relative flex items-center gap-2.5 group">
+            {/* Quick Tooltip: 'Ask Krishi Sahayak AI' */}
+            <button
+              type="button"
+              onClick={() => setIsGeminiAssistantOpen(true)}
+              className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-[#062B1E]/95 dark:bg-[#051F15]/95 text-white shadow-xl border border-emerald-400/40 text-xs font-semibold backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" style={{ animationDuration: '4s' }} />
+              <span className="font-bold tracking-tight text-white">Ask Krishi Sahayak AI</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono">
+                Voice
+              </span>
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
+            </button>
+
+            {/* Floating AI Launcher with subtle animated pulse ring */}
+            <div className="relative">
+              {/* Animated subtle pulse ring aura */}
+              <span className="absolute -inset-1.5 rounded-full bg-emerald-500/35 animate-ping pointer-events-none opacity-70" />
+              <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 opacity-50 blur-xs animate-pulse pointer-events-none" />
+
+              <button
+                type="button"
+                onClick={() => setIsGeminiAssistantOpen(true)}
+                title="Ask Krishi Sahayak AI (कृषि सहायक AI - Voice & Gemini)"
+                className="relative h-12 sm:h-14 px-4 sm:px-5 rounded-full bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 hover:from-emerald-500 hover:to-teal-700 text-white shadow-2xl flex items-center gap-2.5 transition-all active:scale-95 border-2 border-white/90 dark:border-emerald-400/40 ring-4 ring-emerald-500/20 cursor-pointer min-h-[48px]"
+              >
+                <div className="relative">
+                  <Bot className="w-5 h-5 text-amber-300" />
+                  <Mic className="w-2.5 h-2.5 text-white absolute -bottom-1 -right-1 bg-emerald-950 rounded-full" />
+                </div>
+                <span className="text-xs sm:text-sm font-bold font-serif-display tracking-wide">
+                  {language === 'hi' ? 'कृषि सहायक AI' : language === 'mr' ? 'कृषी सहाय्यक AI' : language === 'pa' ? 'ਕ੍ਰਿਸ਼ੀ ਸਹਾਇਕ AI' : 'Krishi Sahayak AI'}
+                </span>
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
